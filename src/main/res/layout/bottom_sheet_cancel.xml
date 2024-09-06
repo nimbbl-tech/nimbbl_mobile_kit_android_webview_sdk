@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:cardview="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:id="@+id/cancelLayout"
+    android:background="@drawable/bottom_sheet_background"
+    android:elevation="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/ic_dialog_info" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Cancel Payment"
+            android:textColor="@android:color/holo_red_dark"
+            android:textSize="18sp" />
+
+        <ImageView
+            android:id="@+id/btnClose"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/ic_dialog_info" />
+    </LinearLayout>
+
+    <androidx.cardview.widget.CardView
+        android:background="@color/white"
+        android:backgroundTint="@color/white"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        cardview:cardCornerRadius="8dp"
+        android:padding="10dp"
+        cardview:cardElevation="1dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+    <TextView
+        android:id="@+id/bulletPoints"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="If you cancel the payment you can't move ahead."
+        android:textColor="@android:color/darker_gray"
+        android:layout_gravity="center_vertical"
+        android:gravity="center_vertical"
+        android:drawableLeft="@android:drawable/btn_radio" />
+        <TextView
+            android:id="@+id/bulletPoints2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="If you cancel the payment you can't move ahead."
+            android:textColor="@android:color/darker_gray"
+            android:layout_gravity="center_vertical"
+            android:gravity="center_vertical"
+            android:drawableLeft="@android:drawable/stat_sys_download" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Yes, Cancel"
+            android:textColor="#012861"
+            android:background="@drawable/bg_nibble_white" />
+
+        <Button
+            android:id="@+id/btnGoBack"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:text="No, Go back"
+            android:textColor="@android:color/white"
+            android:background="@drawable/bg_nibble_dark_blue" />
+    </LinearLayout>
+</LinearLayout>

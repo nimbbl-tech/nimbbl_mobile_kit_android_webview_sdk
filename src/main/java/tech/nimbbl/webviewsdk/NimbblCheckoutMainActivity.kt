@@ -76,28 +76,42 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webview)
         if (intent.hasExtra(EXTRA_TAG_OPTIONS)) {
             options = intent.getParcelableExtra(EXTRA_TAG_OPTIONS)!!
-                if (!isNetConnected(this)) {
-                    onFailedPayment(getString(R.string.no_internet))
-                } else {
-                    updateOrder(options.token!!,options.orderId!!)
-                }
+            if (!isNetConnected(this)) {
+                onFailedPayment(getString(R.string.no_internet))
+            } else {
+                updateOrder(options.token!!, options.orderId!!)
+            }
         } else {
             onFailedPayment(getString(R.string.input_sent_invalid))
         }
     }
 
-    private fun updateOrder(token: String,orderId: String) {
+    private fun updateOrder(token: String, orderId: String) {
         try {
             CoroutineScope(Dispatchers.Main).launch {
-                val response =  NimbblCoreApiSDK.getInstance()
+                val response = NimbblCoreApiSDK.getInstance()
                     ?.updateOrder(token, orderId, "callback_mobile", "android")
-                if (response != null) {
+                if (response != null && response.isSuccessful) {
                     setupWebView()
                 } else {
-                    onFailedPayment(getString(R.string.error_in_update_order))
+                    if (response != null) {
+                        if (response.errorBody() != null) {
+                            try {
+                                val jObjError = JSONObject(response.errorBody()!!.string())
+                                onFailedPayment(
+                                    jObjError.getJSONObject("error")
+                                        .getString("nimbbl_merchant_message")
+                                )
+
+                            } catch (e: Exception) {
+                                onFailedPayment(getString(R.string.error_in_update_order))
+                            }
+
+                        }
+                    }
                 }
             }
-        }catch (e:Exception){
+        } catch (e: Exception) {
             onFailedPayment(getString(R.string.error_in_update_order))
         }
         NimbblCheckoutSDK.instance?.setMyActivityWeakReference(this)
@@ -137,7 +151,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 "$url?payment_flow=${options.paymentFlow}"
             }
         }
-       webView.loadUrl(url)
+        webView.loadUrl(url)
         webView.apply {
             settings.apply {
                 domStorageEnabled = true
@@ -283,7 +297,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     var resultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-             Log.d("SAN", "resultCode-->"+result.resultCode+"data-->"+result.data)
+            Log.d("SAN", "resultCode-->" + result.resultCode + "data-->" + result.data)
             insertJSToWebview()
         }
 
@@ -308,12 +322,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 getPackageManager().getApplicationIcon(resolveInfo.activityInfo.packageName)
             val bitmap = getBitmapFromDrawable(icon)
             if (bitmap != null) {
+                // apssObj.put("appiconbase64", "")
                 apssObj.put("appiconbase64", encodeToBase64(bitmap, Bitmap.CompressFormat.PNG, 100))
             } else {
                 val icon = BitmapFactory.decodeResource(
                     resources,
                     R.drawable.upi
                 )
+                // apssObj.put("appiconbase64","")
                 apssObj.put("appiconbase64", encodeToBase64(icon, Bitmap.CompressFormat.PNG, 100))
             }
             jsonArray.put(apssObj)
@@ -327,18 +343,18 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         }
         val mainobj = JSONObject().put("UPIApps", jsonArray)
 
-        /*      var json = "{\n" +
-                      "  \"UPIApps\": [\n" +
-                      "    {\n" +
-                      "      \"upi_app_name\": \"gpay\",\n" +
-                      "      \"package_name\": \"com.google.android.apps.nbu.paisa.user\"\n" +
-                      "    },\n" +
-                      "    {\n" +
-                      "      \"upi_app_name\": \"phonepay\",\n" +
-                      "      \"package_name\": \"com.phonepe.app\"\n" +
-                      "    }\n" +
-                      "  ]\n" +
-                      "}"*/
+        /*       var json = "{\n" +
+                       "  \"UPIApps\": [\n" +
+                       "    {\n" +
+                       "      \"upi_app_name\": \"gpay\",\n" +
+                       "      \"package_name\": \"com.google.android.apps.nbu.paisa.user\"\n" +
+                       "    },\n" +
+                       "    {\n" +
+                       "      \"upi_app_name\": \"phonepay\",\n" +
+                       "      \"package_name\": \"com.phonepe.app\"\n" +
+                       "    }\n" +
+                       "  ]\n" +
+                       "}"*/
 
         Log.d("SAN", "mainobj--->$mainobj")
         // Log.d("SAN", "json--->$json")
@@ -453,6 +469,40 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 // Whatever you want
                 // when back pressed
+/*
+
+                val bottomSheetDialog = BottomSheetDialog(this@NimbblCheckoutMainActivity)
+                val bottomSheetView = LayoutInflater.from(applicationContext).inflate(
+                    R.layout.bottom_sheet_cancel,
+                    findViewById(R.id.cancelLayout) // Pass the root of the layout
+                )
+                val bulletPointsTextView: TextView = bottomSheetView.findViewById(R.id.bulletPoints)
+                val bulletPoints = listOf(
+                    "If you cancel the payment you can't move ahead.",
+                    "You'll need to redo the payment."
+                )
+                val spannableStringBuilder = SpannableStringBuilder()
+                for (point in bulletPoints) {
+                    val spannableString = SpannableString(point)
+                    spannableString.setSpan(BulletSpan(16), 0, point.length, 0)
+                    spannableStringBuilder.append(spannableString).append("\n")
+                }
+                bulletPointsTextView.text = spannableStringBuilder
+                bottomSheetView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+                    // Handle cancel payment action
+                    bottomSheetDialog.dismiss()
+                    openCancelOptions()
+
+                }
+
+                bottomSheetView.findViewById<Button>(R.id.btnGoBack).setOnClickListener {
+                    // Handle go back action
+                    bottomSheetDialog.dismiss()
+                }
+
+                bottomSheetDialog.setContentView(bottomSheetView)
+                bottomSheetDialog.show()*/
+
                 val b: AlertDialog.Builder = AlertDialog.Builder(this@NimbblCheckoutMainActivity)
                 b.setMessage(getString(R.string.lbl_cancel_payment)).setCancelable(false)
                     .setPositiveButton(
