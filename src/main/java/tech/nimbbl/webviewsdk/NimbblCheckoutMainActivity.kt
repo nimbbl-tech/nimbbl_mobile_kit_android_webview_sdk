@@ -310,7 +310,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         val uri1: Uri = Uri.Builder().scheme("upi").authority("pay").build()
         mainIntent.data = uri1
         val pkgAppsList: List<*> = packageManager.queryIntentActivities(mainIntent, 0)
-
+Log.d("SAN","${pkgAppsList.size}")
         val appListCol = mutableListOf<UpiAppsVo>()
         val jsonArray = JSONArray()
         for (i in pkgAppsList.indices) {

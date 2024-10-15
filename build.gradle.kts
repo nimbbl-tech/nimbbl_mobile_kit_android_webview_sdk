@@ -1,7 +1,11 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("com.android.library")
+    kotlin("android")
+    id("maven-publish")
 }
+
 
 android {
     namespace = "tech.nimbbl.webviewsdk"
@@ -23,18 +27,24 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
-tasks.register<Wrapper>("wrapper") {
-    gradleVersion = "8.4"
+tasks.register<Wrapper>("nimbbl_webviewsdk_wrapper") {
+    gradleVersion = "8.10.2"
 }
-tasks.register("prepareKotlinBuildScriptModel"){}
+tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel"){}
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
 
 dependencies {
 
@@ -46,7 +56,61 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation (libs.kotlinx.coroutines.android)
     // implementation 'tech.nimbbl.sdk:nimbbl-checkout-core-sdk:1.0.3'
-    implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
+    implementation(libs.nimbbl.checkout.core.sdk.java)
+    //implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
+}
+
+publishing {
+    val sdkArtifactId = "nimbbl-checkout-sdk"
+    val sdkGroupId = "tech.nimbbl.sdk"
+    val gitlabToken = "glpat-zswGgsyUM5yVbo9yy6RG"
+    val sdkVersion = "3.0.0"
+    val mavenRepo = "https://gitlab.com/api/v4/projects/25847308/packages/maven"
+
+
+    publications {
+        create<MavenPublication>("aarArchive") {
+            groupId = sdkGroupId
+            artifactId = sdkArtifactId
+            version = sdkVersion
+
+            artifact("${project.buildDir}/outputs/aar/${project.name}-release.aar") {
+                extension = "aar"
+            }
+
+            pom.withXml {
+                val pomXml = asNode()
+                pomXml.appendNode("name", sdkArtifactId)
+                pomXml.appendNode("description", "Nimbbl Checkout SDK for Android")
+
+                val dependenciesNode = pomXml.appendNode("dependencies")
+                configurations.getByName("releaseCompileClasspath").resolvedConfiguration.firstLevelModuleDependencies.forEach {
+                    val groupId = it.moduleGroup
+                    val artifactId = it.moduleName
+
+                    val dependencyNode = dependenciesNode.appendNode("dependency")
+                    dependencyNode.appendNode("groupId", groupId)
+                    dependencyNode.appendNode("artifactId", artifactId)
+                    dependencyNode.appendNode("version", it.moduleVersion)
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = uri(mavenRepo)
+            if (!mavenRepo.startsWith("file")) {
+                credentials(HttpHeaderCredentials::class) {
+                    name = "Private-Token"
+                    value = gitlabToken
+                }
+                authentication {
+                    create<HttpHeaderAuthentication>("header")
+                }
+            }
+        }
+    }
 }
