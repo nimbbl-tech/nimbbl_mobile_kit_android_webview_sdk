@@ -55,18 +55,21 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation (libs.kotlinx.coroutines.android)
-    // implementation 'tech.nimbbl.sdk:nimbbl-checkout-core-sdk:1.0.3'
+    //implementation("tech.nimbbl.sdk:nimbbl-checkout-core-sdk-java:3.0.1")
     implementation(libs.nimbbl.checkout.core.sdk.java)
     //implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
+    implementation ("com.auth0.android:jwtdecode:2.0.0")
+
+
 }
 
 publishing {
     val sdkArtifactId = "nimbbl-checkout-sdk"
     val sdkGroupId = "tech.nimbbl.sdk"
     val gitlabToken = "glpat-zswGgsyUM5yVbo9yy6RG"
-    val sdkVersion = "3.0.0"
+    val sdkVersion = "3.0.4"
     val mavenRepo = "https://gitlab.com/api/v4/projects/25847308/packages/maven"
 
 

@@ -65,11 +65,6 @@ class NimbblCheckoutOptions : Parcelable {
     var image: String? = null
         private set
 
-    /**
-     * string Order ID generated via Orders Api
-     */
-    var orderId: String? = null
-        private set
 
     /**
      * USer information, to be used when no token is specified.
@@ -78,9 +73,6 @@ class NimbblCheckoutOptions : Parcelable {
         private set
 
     var subMerchantId: String? = null
-        private set
-
-    var token: String? = null
         private set
 
     var orderToken: String? = null
@@ -104,9 +96,6 @@ class NimbblCheckoutOptions : Parcelable {
     var upiAppCode: String? = null
         private set
 
-    var invoiceId: String? = null
-        private set
-
     /**
      * Class used to build the immutable [NimbblCheckoutOptions] object.
      */
@@ -117,10 +106,8 @@ class NimbblCheckoutOptions : Parcelable {
         private var name: String? = null
         private var description: String? = null
         private var image: String? = null
-        private var orderID: String? = null
         private var userInfo: NimbblCheckoutUserInfo? = null
         private var subMerchantId: String? = null
-        private var token: String? = null
         private var orderToken: String? = null
         private var paymentModeCode: String? = null
         private var bankCode: String? = null
@@ -128,7 +115,6 @@ class NimbblCheckoutOptions : Parcelable {
         private var paymentFlow: String? = null
         private var upiId: String? = null
         private var upiAppCode: String? = null
-        private var invoiceId: String? = null
 
         /**\
          * Sets the server URL.
@@ -190,15 +176,6 @@ class NimbblCheckoutOptions : Parcelable {
             return this
         }
 
-        /**
-         * Indicates the conference will be joined in audio-only mode. In this mode no video is
-         * sent or received.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
-        fun setOrderId(orderId: String?): Builder {
-            orderID = orderId
-            return this
-        }
 
         fun setUserInfo(userInfo: NimbblCheckoutUserInfo?): Builder {
             this.userInfo = userInfo
@@ -240,18 +217,9 @@ class NimbblCheckoutOptions : Parcelable {
             return this
         }
 
-        fun setToken(tkn: String?): Builder {
-            token = tkn
-            return this
-        }
 
         fun setOrderToken(tkn: String?): Builder {
             orderToken = tkn
-            return this
-        }
-
-        fun setInvoiceId(invId: String?): Builder {
-            invoiceId = invId
             return this
         }
 
@@ -268,10 +236,8 @@ class NimbblCheckoutOptions : Parcelable {
             options.name = name
             options.description = description
             options.image = image
-            options.orderId = orderID
             options.userInfo = userInfo
             options.subMerchantId = subMerchantId
-            options.token = token
             options.orderToken = orderToken
             options.paymentModeCode = paymentModeCode
             options.bankCode = bankCode
@@ -279,7 +245,6 @@ class NimbblCheckoutOptions : Parcelable {
             options.paymentFlow = paymentFlow
             options.upiId = upiId
             options.upiAppCode = upiAppCode
-            options.invoiceId = invoiceId
             return options
         }
     }
@@ -292,10 +257,8 @@ class NimbblCheckoutOptions : Parcelable {
         name = `in`.readString()
         description = `in`.readString()
         image = `in`.readString()
-        orderId = `in`.readString()
         userInfo = NimbblCheckoutUserInfo(`in`.readBundle()!!)
         subMerchantId = `in`.readString()
-        token = `in`.readString()
         orderToken = `in`.readString()
         paymentModeCode = `in`.readString()
         bankCode = `in`.readString()
@@ -303,7 +266,6 @@ class NimbblCheckoutOptions : Parcelable {
         paymentFlow = `in`.readString()
         upiId = `in`.readString()
         upiAppCode = `in`.readString()
-        invoiceId = `in`.readString()
     }
 
 
@@ -314,10 +276,8 @@ class NimbblCheckoutOptions : Parcelable {
         dest.writeString(name)
         dest.writeString(description)
         dest.writeString(image)
-        dest.writeString(orderId)
         dest.writeBundle(if (userInfo != null) userInfo!!.asBundle() else Bundle())
         dest.writeString(subMerchantId)
-        dest.writeString(token)
         dest.writeString(orderToken)
         dest.writeString(paymentModeCode)
         dest.writeString(bankCode)
@@ -325,7 +285,6 @@ class NimbblCheckoutOptions : Parcelable {
         dest.writeString(paymentFlow)
         dest.writeString(upiId)
         dest.writeString(upiAppCode)
-        dest.writeString(invoiceId)
     }
 
     override fun describeContents(): Int {

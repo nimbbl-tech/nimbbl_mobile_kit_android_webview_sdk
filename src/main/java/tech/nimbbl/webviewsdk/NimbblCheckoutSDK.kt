@@ -66,16 +66,16 @@ class NimbblCheckoutSDK private constructor() {
         var webViewUrl = ""
         var webViewRespUrl = ""
         when (NIMBBL_TECH_URL) {
-            "https://qa4api.nimbbl.tech/" -> {
-                webViewUrl = "https://sonicqa4.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
-                webViewRespUrl = "https://sonicqa4.nimbbl.tech/mobile/redirect"
+            "https://qa2api.nimbbl.tech/" -> {
+                webViewUrl = "https://qa2sonic.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
+                webViewRespUrl = "https://qa2sonic.nimbbl.tech/mobile/redirect"
             }
 
             "https://apipp.nimbbl.tech/" -> {
               //  webViewUrl = "https://sonicpp.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
-                webViewUrl = "https://sonicpp2.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
+                webViewUrl = "https://sonicpp.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
                 //webViewRespUrl = "https://sonicpp.nimbbl.tech/mobile/redirect"
-                webViewRespUrl = "https://sonicpp2.nimbbl.tech/mobile/redirect"
+                webViewRespUrl = "https://sonicpp.nimbbl.tech/mobile/redirect"
             }
 
             "https://api.nimbbl.tech/" -> {

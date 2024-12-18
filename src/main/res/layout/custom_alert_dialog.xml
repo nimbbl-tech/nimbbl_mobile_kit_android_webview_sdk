@@ -4,28 +4,56 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="10dp"
     android:orientation="vertical"
     app:cardBackgroundColor="#FFFFFF"
-    app:cardCornerRadius="5dp"
+    app:cardCornerRadius="15dp"
     app:cardElevation="5dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <TextView
+        android:orientation="vertical"
+        android:padding="20dp">
+        <!-- Icon and Title -->
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_gravity="center"
-            android:background="#FF4646"
-            android:gravity="center"
-            android:text="Please select cancellation reason"
-            android:textColor="#fff"
-            android:textSize="14dp"
-            android:textStyle="bold" />
+            android:layout_height="wrap_content"
 
+            android:padding="8dp">
+
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/iv_info_prefix"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_centerVertical="true"
+                android:tint="@android:color/holo_red_dark"
+                android:src="@drawable/warning" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Cancellation Reason"
+                android:textColor="#0F1A2A"
+                android:textSize="14sp"
+                android:layout_toEndOf="@+id/iv_info_prefix"
+                android:layout_toStartOf="@+id/iv_close"/>
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/iv_close"
+                android:layout_width="20dp"
+                android:layout_alignParentEnd="true"
+                android:layout_height="20dp"
+                android:tint="@android:color/black"
+                android:src="@android:drawable/ic_menu_close_clear_cancel" />
+        </RelativeLayout>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#F8F9FA"
+            android:padding="16dp">
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv"
             android:layout_width="match_parent"
@@ -35,17 +63,16 @@
             android:layout_marginRight="10dp"
             android:layout_marginBottom="20dp"
             tools:listitem="@layout/list_item" />
+        </androidx.cardview.widget.CardView>
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_ok"
-            android:layout_width="100dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_marginRight="20dp"
             android:layout_marginBottom="20dp"
             android:textColor="@color/white"
-            android:background="@drawable/bg_nibble_black"
-            android:text="ok"
+            android:text="Submit"
             android:textSize="14dp"
             android:visibility="visible" />
 

@@ -11,6 +11,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Message
@@ -31,8 +32,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,6 +51,7 @@ import tech.nimbbl.webviewsdk.util.LogUtil.Companion.debugLog
 import tech.nimbbl.webviewsdk.util.RestApiUtils
 import tech.nimbbl.webviewsdk.util.encodeToBase64
 import tech.nimbbl.webviewsdk.util.isNetConnected
+import tech.nimbbl.webviewsdk.util.parseJwtToken
 import java.net.URLDecoder
 
 
@@ -69,6 +75,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     private lateinit var options: NimbblCheckoutOptions
     private var cancelOption = "Others"
     private lateinit var transactionID: String
+    private var btnBackGroundColor = "#000000"
+    private var btnTextColor = "#ffffff"
+    private var orderID = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +88,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             if (!isNetConnected(this)) {
                 onFailedPayment(getString(R.string.no_internet))
             } else {
-                updateOrder(options.token!!, options.orderId!!)
+                orderID = parseJwtToken(options.orderToken!!)
+                Log.d("orderID-->",orderID)
+                updateOrder(options.orderToken!!, orderID)
             }
         } else {
             onFailedPayment(getString(R.string.input_sent_invalid))
@@ -92,6 +103,41 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 val response = NimbblCoreApiSDK.getInstance()
                     ?.updateOrder(token, orderId, "callback_mobile", "android")
                 if (response != null && response.isSuccessful) {
+                    checkOutDetails()
+                } else {
+                    if (response != null) {
+                        if (response.errorBody() != null) {
+                            try {
+                                val jObjError = JSONObject(response.errorBody()!!.string())
+                                onFailedPayment(
+                                    jObjError.getJSONObject("error")
+                                        .getString("nimbbl_merchant_message")
+                                )
+
+                            } catch (e: Exception) {
+                                onFailedPayment(getString(R.string.error_in_update_order))
+                            }
+
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            onFailedPayment(getString(R.string.error_in_update_order))
+        }
+        NimbblCheckoutSDK.instance?.setMyActivityWeakReference(this)
+
+    }
+
+    private fun checkOutDetails() {
+        try {
+            CoroutineScope(Dispatchers.Main).launch {
+                val response = NimbblCoreApiSDK.getInstance()
+                    ?.getCheckoutDetails(options.orderToken!!)
+                if (response != null && response.isSuccessful) {
+                    btnBackGroundColor = response.body()!!.checkout_background_color
+                    btnTextColor =
+                        if (response.body()!!.checkout_text_color == "white") "#ffffff" else "#000000"
                     setupWebView()
                 } else {
                     if (response != null) {
@@ -121,7 +167,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         //val url = RestApiUtils.WEB_VIEW_VIEW_URL
-        var url = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, options.orderId, options.orderToken)
+        var url = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, orderID, options.orderToken)
         if (options.paymentModeCode?.isNotEmpty() == true) {
             url = if (url.indexOf("?") > 0) {
                 "$url&payment_mode=${options.paymentModeCode}"
@@ -264,9 +310,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
                 ?.getTransactionEnquiry(
-                    options.token!!,
-                    options.orderId!!,
-                    options.invoiceId!!,
+                    options.orderToken!!,
+                    orderID,
+                    orderID,
                     transactionID
                 )
             /*  val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
@@ -310,7 +356,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         val uri1: Uri = Uri.Builder().scheme("upi").authority("pay").build()
         mainIntent.data = uri1
         val pkgAppsList: List<*> = packageManager.queryIntentActivities(mainIntent, 0)
-Log.d("SAN","${pkgAppsList.size}")
+        Log.d("SAN", "${pkgAppsList.size}")
         val appListCol = mutableListOf<UpiAppsVo>()
         val jsonArray = JSONArray()
         for (i in pkgAppsList.indices) {
@@ -466,55 +512,62 @@ Log.d("SAN","${pkgAppsList.size}")
     override fun getOnBackInvokedDispatcher(): OnBackInvokedDispatcher {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            @SuppressLint("MissingInflatedId")
             override fun handleOnBackPressed() {
                 // Whatever you want
                 // when back pressed
-/*
-
                 val bottomSheetDialog = BottomSheetDialog(this@NimbblCheckoutMainActivity)
-                val bottomSheetView = LayoutInflater.from(applicationContext).inflate(
-                    R.layout.bottom_sheet_cancel,
-                    findViewById(R.id.cancelLayout) // Pass the root of the layout
-                )
-                val bulletPointsTextView: TextView = bottomSheetView.findViewById(R.id.bulletPoints)
-                val bulletPoints = listOf(
-                    "If you cancel the payment you can't move ahead.",
-                    "You'll need to redo the payment."
-                )
-                val spannableStringBuilder = SpannableStringBuilder()
-                for (point in bulletPoints) {
-                    val spannableString = SpannableString(point)
-                    spannableString.setSpan(BulletSpan(16), 0, point.length, 0)
-                    spannableStringBuilder.append(spannableString).append("\n")
+
+
+                // Inflate the custom layout for the Bottom Sheet
+                val bottomSheetView: View =
+                    layoutInflater.inflate(R.layout.bottom_sheet_cancel_dialog, null)
+                bottomSheetDialog.setContentView(bottomSheetView)
+
+
+                // Handle the buttons inside the Bottom Sheet
+
+
+                // Set the button click listeners
+                bottomSheetDialog.findViewById<AppCompatImageView>(R.id.iv_close)
+                    ?.setOnClickListener { v: View? ->
+                        // Handle cancel logic
+                        bottomSheetDialog.dismiss()
+                    }
+                val button = bottomSheetDialog.findViewById<AppCompatButton>(R.id.btn_cancel)
+                button?.setTextColor(Color.parseColor(btnBackGroundColor))
+                val border = GradientDrawable()
+                border.shape = GradientDrawable.RECTANGLE
+                border.setStroke(
+                    4,
+                    Color.parseColor(btnBackGroundColor)
+                )  // Set border color and width
+                border.setColor(Color.parseColor(btnTextColor))
+                // Set button background color
+
+                if (button != null) {
+                    button.background = border
                 }
-                bulletPointsTextView.text = spannableStringBuilder
-                bottomSheetView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-                    // Handle cancel payment action
+                // Set the button click listeners
+                button?.setOnClickListener {
+                    // Handle cancel logic
                     bottomSheetDialog.dismiss()
                     openCancelOptions()
-
                 }
 
-                bottomSheetView.findViewById<Button>(R.id.btnGoBack).setOnClickListener {
-                    // Handle go back action
-                    bottomSheetDialog.dismiss()
-                }
+                val buttonGoBack = bottomSheetDialog.findViewById<AppCompatButton>(R.id.btn_go_back)
+                buttonGoBack?.setTextColor(Color.parseColor(btnTextColor))
+                buttonGoBack?.setBackgroundColor(Color.parseColor(btnBackGroundColor))
+                buttonGoBack
+                    ?.setOnClickListener { v: View? ->
+                        // Handle go back logic
+                        bottomSheetDialog.dismiss()
+                    }
 
-                bottomSheetDialog.setContentView(bottomSheetView)
-                bottomSheetDialog.show()*/
 
-                val b: AlertDialog.Builder = AlertDialog.Builder(this@NimbblCheckoutMainActivity)
-                b.setMessage(getString(R.string.lbl_cancel_payment)).setCancelable(false)
-                    .setPositiveButton(
-                        getString(R.string.lbl_yes)
-                    ) { dialog, _ -> //open another dialog
-                        dialog.dismiss()
-                        openCancelOptions()
-                    }.setNegativeButton(
-                        getString(R.string.lbl_no)
-                    ) { dialog, _ -> dialog.dismiss() }
-                    .create()
-                    .show()
+                // Show the Bottom Sheet Dialog
+                bottomSheetDialog.show()
+
             }
         })
         return super.getOnBackInvokedDispatcher()
@@ -522,32 +575,46 @@ Log.d("SAN","${pkgAppsList.size}")
 
 
     private fun openCancelOptions() {
-        val b = AlertDialog.Builder(this)
-        b.setCancelable(false)
-        val inflater = layoutInflater
-        val dialogView: View = inflater.inflate(R.layout.custom_alert_dialog, null) as View
-        b.setView(dialogView)
-        val cancelOptionsDialog: AlertDialog = b.create()
-        val rv: RecyclerView = dialogView.findViewById(R.id.rv)
+        val bottomSheetDialog = BottomSheetDialog(this@NimbblCheckoutMainActivity)
+
+
+        // Inflate the custom layout for the Bottom Sheet
+        val bottomSheetView: View =
+            layoutInflater.inflate(R.layout.custom_alert_dialog, null)
+        bottomSheetDialog.setContentView(bottomSheetView)
+
+        val rv: RecyclerView? = bottomSheetDialog.findViewById(R.id.rv)
         val adapter = PaymentCancelOptionsAdapter(this, optionsList)
-        rv.adapter = adapter
-        rv.layoutManager = LinearLayoutManager(this)
-        val okBtn: Button = dialogView.findViewById(R.id.btn_ok)
-        okBtn.setOnClickListener {
+        if (rv != null) {
+            rv.adapter = adapter
+        }
+        if (rv != null) {
+            rv.layoutManager = LinearLayoutManager(this)
+        }
+        // Set the button click listeners
+        bottomSheetDialog.findViewById<AppCompatImageView>(R.id.iv_close)
+            ?.setOnClickListener { v: View? ->
+                // Handle cancel logic
+                bottomSheetDialog.dismiss()
+            }
+        val okBtn: AppCompatButton? = bottomSheetDialog.findViewById(R.id.btn_ok)
+        okBtn?.setBackgroundColor(Color.parseColor(btnBackGroundColor))
+        okBtn?.setTextColor(Color.parseColor(btnTextColor))
+        okBtn?.setOnClickListener {
             updateCancelOption(adapter.getSelectedOption())
-            cancelOptionsDialog.dismiss()
+            bottomSheetDialog.dismiss()
             finish()
 
         }
-        cancelOptionsDialog.show()
+        // Show the Bottom Sheet Dialog
+        bottomSheetDialog.show()
     }
 
     private fun updateCancelOption(cancelReason: String?) {
 
         CoroutineScope(Dispatchers.Main).launch {
             NimbblCoreApiSDK.getInstance()
-                ?.updateCheckOutCancelReason(options.token!!, options.orderId!!, cancelReason!!)
-            finish()
+                ?.updateCheckOutCancelReason(options.orderToken!!, orderID, cancelReason!!)
         }
 
 

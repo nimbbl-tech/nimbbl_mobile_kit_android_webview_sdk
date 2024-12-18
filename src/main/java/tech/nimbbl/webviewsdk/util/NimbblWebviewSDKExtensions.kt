@@ -8,6 +8,7 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.provider.Settings
 import android.util.Base64
+import com.auth0.android.jwt.JWT
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -30,6 +31,7 @@ fun getDeviceID(context: Context): String {
     }
 }
 
+
 fun isNetConnected(context: Context): Boolean {
     val result: Boolean
     val connectivityManager =
@@ -51,4 +53,19 @@ fun encodeToBase64(image: Bitmap, compressFormat: Bitmap.CompressFormat, quality
     val byteArrayOS = ByteArrayOutputStream()
     image.compress(compressFormat, quality, byteArrayOS)
     return Base64.encodeToString(byteArrayOS.toByteArray(), Base64.DEFAULT)
+}
+
+fun parseJwtToken(token: String): String {
+    try {
+        // Decode the JWT token
+        val jwt = JWT(token)
+
+        // Get the claim from the token (replace "claim_name" with your actual claim name)
+       return jwt.getClaim("order_id").asString().toString()
+
+
+    } catch (exception: Exception) {
+        // Handle invalid or expired JWT tokens
+      return ""
+    }
 }
