@@ -31,22 +31,27 @@ class NimbblCheckoutSDK private constructor() {
     fun checkout(options: NimbblCheckoutOptions?) {
 
         //this.options = options;
-        val intent = Intent(mContext, NimbblCheckoutMainActivity::class.java)
-        intent.putExtra("options", options)
-        mContext!!.startActivity(intent)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mContext!!.registerReceiver(
-                receiver, IntentFilter("PaymentSuccess"),
-                Context.RECEIVER_EXPORTED
-            )
-            mContext!!.registerReceiver(
-                receiver, IntentFilter("PaymentFailure"),
-                Context.RECEIVER_EXPORTED
-            )
-        } else {
-            mContext!!.registerReceiver(receiver, IntentFilter("PaymentSuccess"))
-            mContext!!.registerReceiver(receiver, IntentFilter("PaymentFailure"))
+        try {
+            val intent = Intent(mContext, NimbblCheckoutMainActivity::class.java)
+            intent.putExtra("options", options)
+            mContext!!.startActivity(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                mContext!!.registerReceiver(
+                    receiver, IntentFilter("PaymentSuccess"),
+                    Context.RECEIVER_EXPORTED
+                )
+                mContext!!.registerReceiver(
+                    receiver, IntentFilter("PaymentFailure"),
+                    Context.RECEIVER_EXPORTED
+                )
+            } else {
+                mContext!!.registerReceiver(receiver, IntentFilter("PaymentSuccess"))
+                mContext!!.registerReceiver(receiver, IntentFilter("PaymentFailure"))
+            }
+        }catch (e: Exception){
+            e.printStackTrace()
         }
+
 
     }
 
