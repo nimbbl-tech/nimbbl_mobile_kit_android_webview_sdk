@@ -296,7 +296,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         "Unable to launch UPI intent app.",
                         Toast.LENGTH_SHORT
                     ).show()
-                    insertJSToWebview()
+                    insertJSToWebview(false)
                 }
 
             }
@@ -306,35 +306,43 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     }
 
-    private fun insertJSToWebview() {
+    private fun insertJSToWebview(isDeviceBackPressed : Boolean) {
         CoroutineScope(Dispatchers.Main).launch {
-            val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
-                ?.getTransactionEnquiry(
-                    options.orderToken!!,
-                    orderID,
-                    orderID,
-                    transactionID
-                )
-            /*  val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
+            if(isDeviceBackPressed) {
+                val jsonObject = JSONObject()
+                jsonObject.put(PayloadKeys.key_sdk_action, "device_back_initiated")
+                jsonObject.put(PayloadKeys.key_source, "nimbbl_android_sdk")
+                webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
+            }else {
+
+                val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
+                    ?.getTransactionEnquiry(
+                        options.orderToken!!,
+                        orderID,
+                        orderID,
+                        transactionID
+                    )
+                /*  val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
                   ?.getTransactionEnquiry(
                       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46bmltYmJsIiwiaWF0IjoxNzE2OTg1NTE1LCJleHAiOjE3MTY5ODY3MTUsInR5cGUiOiJvcmRlciIsInN1Yl9tZXJjaGFudF9pZCI6Miwib3JkZXJfaWQiOiJvX2xQTThWTno1WURRT1dQRHoifQ.yqWIUFB1u_lzRyEcwR8x213IbdHC0zmOZBg26xDohAs",
                       "o_lPM8VNz5YDQOWPDz",
                       "dev0.6169222828798078",
                       transactionID
                   )*/
-            val jsonObject = JSONObject()
-            jsonObject.put(PayloadKeys.key_upi_intent_back_response, "close")
+                val jsonObject = JSONObject()
+                jsonObject.put(PayloadKeys.key_upi_intent_back_response, "close")
 
-            if (paymentEnquiryResponse != null && paymentEnquiryResponse.isSuccessful) {
-                jsonObject.put(
-                    PayloadKeys.key_transaction_enquiry_api_response,
-                    paymentEnquiryResponse.body()!!.order.status
-                )
-                webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
-            } else {
-                jsonObject.put(PayloadKeys.key_transaction_enquiry_api_response, "")
-                webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
+                if (paymentEnquiryResponse != null && paymentEnquiryResponse.isSuccessful) {
+                    jsonObject.put(
+                        PayloadKeys.key_transaction_enquiry_api_response,
+                        paymentEnquiryResponse.body()!!.order.status
+                    )
+                    webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
+                } else {
+                    jsonObject.put(PayloadKeys.key_transaction_enquiry_api_response, "")
+                    webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
 
+                }
             }
         }
 
@@ -344,7 +352,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     var resultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             Log.d("SAN", "resultCode-->" + result.resultCode + "data-->" + result.data)
-            insertJSToWebview()
+            insertJSToWebview(false)
         }
 
     private fun sendUpiIntents() {
@@ -516,9 +524,8 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 // Whatever you want
                 // when back pressed
-                val bottomSheetDialog = BottomSheetDialog(this@NimbblCheckoutMainActivity)
-
-
+                insertJSToWebview(true)
+            /*    val bottomSheetDialog = BottomSheetDialog(this@NimbblCheckoutMainActivity)
                 // Inflate the custom layout for the Bottom Sheet
                 val bottomSheetView: View =
                     layoutInflater.inflate(R.layout.bottom_sheet_cancel_dialog, null)
@@ -566,7 +573,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
 
                 // Show the Bottom Sheet Dialog
-                bottomSheetDialog.show()
+                bottomSheetDialog.show()*/
 
             }
         })
@@ -603,8 +610,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         okBtn?.setOnClickListener {
             updateCancelOption(adapter.getSelectedOption())
             bottomSheetDialog.dismiss()
-            finish()
-
+            insertJSToWebview(true)
         }
         // Show the Bottom Sheet Dialog
         bottomSheetDialog.show()

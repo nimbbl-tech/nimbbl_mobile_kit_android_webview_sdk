@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "tech.nimbbl.webviewsdk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
@@ -56,8 +56,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation (libs.kotlinx.coroutines.android)
     //implementation("tech.nimbbl.sdk:nimbbl-checkout-core-sdk-java:3.0.1")
-    implementation(libs.nimbbl.checkout.core.sdk.java)
-    //implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
+    //implementation(libs.nimbbl.checkout.core.sdk.java)
+    implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
     implementation ("com.auth0.android:jwtdecode:2.0.0")

@@ -71,6 +71,10 @@ class NimbblCheckoutSDK private constructor() {
         var webViewUrl = ""
         var webViewRespUrl = ""
         when (NIMBBL_TECH_URL) {
+            "https://qa1api.nimbbl.tech/" -> {
+                webViewUrl = "https://qa1sonic.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
+                webViewRespUrl = "https://qa1sonic.nimbbl.tech/mobile/redirect"
+            }
             "https://qa2api.nimbbl.tech/" -> {
                 webViewUrl = "https://qa2sonic.nimbbl.tech/?order_id=%1\$s&token=%2\$s"
                 webViewRespUrl = "https://qa2sonic.nimbbl.tech/mobile/redirect"
