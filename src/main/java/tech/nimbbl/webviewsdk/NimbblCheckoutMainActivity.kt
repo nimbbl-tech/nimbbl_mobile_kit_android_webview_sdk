@@ -11,7 +11,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Message
@@ -25,16 +24,13 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebView.WebViewTransport
 import android.webkit.WebViewClient
-import android.widget.Button
 import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.AppCompatImageView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -53,6 +49,7 @@ import tech.nimbbl.webviewsdk.util.encodeToBase64
 import tech.nimbbl.webviewsdk.util.isNetConnected
 import tech.nimbbl.webviewsdk.util.parseJwtToken
 import java.net.URLDecoder
+import androidx.core.net.toUri
 
 
 class NimbblCheckoutMainActivity : AppCompatActivity() {
@@ -78,6 +75,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     private var btnBackGroundColor = "#000000"
     private var btnTextColor = "#ffffff"
     private var orderID = ""
+    var url =""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -167,7 +165,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         //val url = RestApiUtils.WEB_VIEW_VIEW_URL
-        var url = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, orderID, options.orderToken)
+         url = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, orderID, options.orderToken)
         if (options.paymentModeCode?.isNotEmpty() == true) {
             url = if (url.indexOf("?") > 0) {
                 "$url&payment_mode=${options.paymentModeCode}"
@@ -308,46 +306,77 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     private fun insertJSToWebview(isDeviceBackPressed : Boolean) {
         CoroutineScope(Dispatchers.Main).launch {
-            if(isDeviceBackPressed) {
-                val jsonObject = JSONObject()
-                jsonObject.put(PayloadKeys.key_sdk_action, "device_back_initiated")
-                jsonObject.put(PayloadKeys.key_source, "nimbbl_android_sdk")
-                webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
-            }else {
-
-                val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
-                    ?.getTransactionEnquiry(
-                        options.orderToken!!,
-                        orderID,
-                        orderID,
-                        transactionID
-                    )
-                /*  val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()
-                  ?.getTransactionEnquiry(
-                      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46bmltYmJsIiwiaWF0IjoxNzE2OTg1NTE1LCJleHAiOjE3MTY5ODY3MTUsInR5cGUiOiJvcmRlciIsInN1Yl9tZXJjaGFudF9pZCI6Miwib3JkZXJfaWQiOiJvX2xQTThWTno1WURRT1dQRHoifQ.yqWIUFB1u_lzRyEcwR8x213IbdHC0zmOZBg26xDohAs",
-                      "o_lPM8VNz5YDQOWPDz",
-                      "dev0.6169222828798078",
-                      transactionID
-                  )*/
-                val jsonObject = JSONObject()
-                jsonObject.put(PayloadKeys.key_upi_intent_back_response, "close")
-
-                if (paymentEnquiryResponse != null && paymentEnquiryResponse.isSuccessful) {
-                    jsonObject.put(
-                        PayloadKeys.key_transaction_enquiry_api_response,
-                        paymentEnquiryResponse.body()!!.order.status
-                    )
-                    webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
+            try {
+                if (isDeviceBackPressed) {
+                    handleDeviceBackPressed()
                 } else {
-                    jsonObject.put(PayloadKeys.key_transaction_enquiry_api_response, "")
-                    webView.evaluateJavascript("window.postMessage('$jsonObject', '*');", null)
-
+                    handleUpiIntentBack()
                 }
+            } catch (e: Exception) {
+                Log.e("BackHandler", "Error handling back press: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun handleDeviceBackPressed() {
+        val currentUrl = webView.getUrl()
+
+        Log.d("BackHandler", "currentUrl: $currentUrl")
+        Log.d("BackHandler", "expected url: $url")
+
+        if (!currentUrl.isNullOrEmpty()) {
+            val uri = currentUrl.toUri()
+            val baseUrl = "${uri.scheme}://${uri.authority}"
+
+            Log.d("BaseURL", baseUrl)
+
+            val expectedBase = url.toUri().buildUpon().path("").encodedQuery(null).fragment(null).build().toString()
+
+            if (!baseUrl.startsWith(expectedBase)) {
+                val updatedUrl = url.toUri().buildUpon().apply {
+                    uri.queryParameterNames.forEach { param ->
+                        appendQueryParameter(param, if (param == "browserBack") "true" else uri.getQueryParameter(param))
+                    }
+                    if (!uri.queryParameterNames.contains("browserBack")) {
+                        appendQueryParameter("browserBack", "true")
+                    }
+                }.build().toString()
+
+                webView.loadUrl(updatedUrl)
             }
         }
 
+        val jsonObject = JSONObject().apply {
+            put(PayloadKeys.key_sdk_action, "device_back_initiated")
+            put(PayloadKeys.key_source, "nimbbl_android_sdk")
+        }
 
+        val jsString = JSONObject.quote(jsonObject.toString())
+        webView.evaluateJavascript("window.postMessage($jsString, '*');", null)
     }
+    private suspend fun handleUpiIntentBack() {
+        val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()?.getTransactionEnquiry(
+            options.orderToken!!,
+            orderID,
+            orderID,
+            transactionID
+        )
+
+        val jsonObject = JSONObject().apply {
+            put(PayloadKeys.key_upi_intent_back_response, "close")
+            val status = if (paymentEnquiryResponse?.isSuccessful == true) {
+                paymentEnquiryResponse.body()?.order?.status ?: ""
+            } else {
+                ""
+            }
+            put(PayloadKeys.key_transaction_enquiry_api_response, status)
+        }
+
+        val jsString = JSONObject.quote(jsonObject.toString())
+        webView.evaluateJavascript("window.postMessage($jsString, '*');", null)
+    }
+
+
 
     var resultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->

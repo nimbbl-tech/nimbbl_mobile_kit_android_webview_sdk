@@ -6,6 +6,7 @@ pluginManagement {
         maven {
             url = uri("https://gitlab.com/api/v4/projects/25847308/packages/maven")
         }
+        maven { url = uri("https://jitpack.io") }
     }
     plugins {
         id("com.android.library") version "8.6.1" apply false // Ensure consistency
@@ -22,6 +23,7 @@ dependencyResolutionManagement {
         maven {
             url = uri("https://gitlab.com/api/v4/projects/25847308/packages/maven")
         }
+        maven { url = uri("https://jitpack.io") }
     }
 
 }
