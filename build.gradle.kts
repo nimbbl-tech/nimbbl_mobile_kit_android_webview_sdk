@@ -58,7 +58,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.auth0.android:jwtdecode:2.0.0")
-    implementation("tech.nimbbl.sdk:nimbbl-mobile-kit-core-api-sdk:3.0.6+1") // example, adjust as per your release
+    implementation("tech.nimbbl.sdk:nimbbl-mobile-kit-core-api-sdk:3.0.6") // example, adjust as per your release
 
 
 
