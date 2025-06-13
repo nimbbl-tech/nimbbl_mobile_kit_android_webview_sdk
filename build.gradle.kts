@@ -62,7 +62,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.auth0.android:jwtdecode:2.0.0")
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.6")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.7")
 }
 
 // Optional: include sources in the published artifact
