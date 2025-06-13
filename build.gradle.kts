@@ -36,7 +36,7 @@ android {
 }
 
 tasks.register<Wrapper>("nimbbl_webviewsdk_wrapper") {
-    gradleVersion = "8.10.2"
+    gradleVersion = "8.11.1"
 }
 tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel"){}
 
@@ -58,13 +58,13 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.auth0.android:jwtdecode:2.0.0")
-    implementation("tech.nimbbl.sdk:nimbbl-mobile-kit-core-api-sdk:3.0.6") // example, adjust as per your release
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.6")
 
 
 
 }
 
-publishing {
+/*publishing {
     val sdkArtifactId = "nimbbl-checkout-sdk"
     val sdkGroupId = "tech.nimbbl.sdk"
     val gitlabToken = "glpat-zswGgsyUM5yVbo9yy6RG"
@@ -115,4 +115,4 @@ publishing {
             }
         }
     }
-}
+}*/
