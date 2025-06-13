@@ -47,20 +47,19 @@ tasks.withType<KotlinCompile> {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+//implementation("tech.nimbbl.sdk:nimbbl-checkout-core-sdk-java:3.0.1")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.auth0.android:jwtdecode:2.0.0")
+    implementation("tech.nimbbl.sdk:nimbbl-mobile-kit-core-api-sdk:3.0.6+1") // example, adjust as per your release
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    implementation (libs.kotlinx.coroutines.android)
-    //implementation("tech.nimbbl.sdk:nimbbl-checkout-core-sdk-java:3.0.1")
-    //implementation(libs.nimbbl.checkout.core.sdk.java)
-    implementation (project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation (libs.retrofit)
-    implementation (libs.converter.gson)
-    implementation ("com.auth0.android:jwtdecode:2.0.0")
 
 
 }
