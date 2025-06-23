@@ -349,6 +349,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         val jsonObject = JSONObject().apply {
             put(PayloadKeys.key_sdk_action, "device_back_initiated")
             put(PayloadKeys.key_source, "nimbbl_android_sdk")
+          //  put(PayloadKeys.key_source, "nimbbl_flutter_sdk")
         }
 
         val jsString = JSONObject.quote(jsonObject.toString())
