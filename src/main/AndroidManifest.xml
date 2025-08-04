@@ -6,8 +6,9 @@
 
     <application>
         <activity
-            android:name=".NimbblCheckoutMainActivity"
-            android:exported="false" />
+            android:name=".ui.activity.NimbblCheckoutMainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"/>
     </application>
 
     <queries>

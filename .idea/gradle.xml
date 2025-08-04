@@ -10,7 +10,7 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/nimbbl_mobile_kit_core_api_sdk" />
+            <option value="$PROJECT_DIR$/../nimbbl_mobile_kit_core_api_sdk" />
           </set>
         </option>
       </GradleProjectSettings>

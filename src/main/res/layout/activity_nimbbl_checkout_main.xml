@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".NimbblCheckoutMainActivity">
+    tools:context=".ui.activity.NimbblCheckoutMainActivity"
+    android:id="@+id/ll_main_activity">
 
     <WebView
         android:layout_width="match_parent"

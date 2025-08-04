@@ -11,7 +11,7 @@ pluginManagement {
         }
     }
     plugins {
-        id("com.android.library") version "8.6.1" apply false // Ensure consistency
+        id("com.android.library") version "8.10.1" apply false // Ensure consistency
         kotlin("android") version "1.9.0" apply false  // Ensure consistency
     }
 
@@ -29,5 +29,8 @@ dependencyResolutionManagement {
             url = uri("https://jitpack.io")
         }
     }
-
 }
+
+// Include Core API SDK as a dependency
+/*include(":nimbbl_mobile_kit_core_api_sdk")
+pr*/oject(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")
