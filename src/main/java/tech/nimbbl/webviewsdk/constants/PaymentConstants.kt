@@ -16,7 +16,7 @@ object PaymentConstants {
     val is_debug_enabled = BuildConfig.DEBUG
     
     // Centralized SDK Version - Single source of truth for WebView SDK
-    const val SDK_VERSION_CENTRAL = "3.0.8"
+    const val SDK_VERSION_CENTRAL = "3.0.12"
     const val SDK_VERSION = SDK_VERSION_CENTRAL // Reference to centralized version
     
     // SDK Initialization Errors

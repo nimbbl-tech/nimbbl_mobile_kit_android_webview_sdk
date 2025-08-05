@@ -7,9 +7,9 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 
 import android.content.Context
 import android.util.Log
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 
 /**

@@ -60,7 +60,7 @@ dependencies {
     
     // Core API SDK dependency
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-21")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
     
     // JAXB dependencies are included via the core API SDK dependency
     // implementation("javax.xml.bind:jaxb-api:2.3.1")
@@ -79,7 +79,7 @@ afterEvaluate {
 
                 groupId = "com.github.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
-                version = "3.0.8-snapshot-11"
+                version = "3.0.11"
 
                 pom {
                     name.set("nimbbl-checkout-sdk")

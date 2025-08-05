@@ -15,9 +15,8 @@ import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
-import java.net.URLDecoder
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
+import java.net.URLDecoder
 
 /**
  * Handler class for managing payment success and failure scenarios

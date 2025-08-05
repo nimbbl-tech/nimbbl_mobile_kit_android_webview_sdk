@@ -25,6 +25,7 @@ import tech.nimbbl.coreapisdk.utils.extensions.getMerchantIDFromJwtToken
 import tech.nimbbl.coreapisdk.utils.extensions.md5
 import tech.nimbbl.coreapisdk.utils.extensions.parseJwtToken
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 import tech.nimbbl.webviewsdk.models.interfaces.NimbblCheckoutPaymentListener
 import tech.nimbbl.webviewsdk.utils.RestApiUtils.NIMBBL_TECH_URL
@@ -33,10 +34,6 @@ import tech.nimbbl.webviewsdk.utils.RestApiUtils.WEB_VIEW_VIEW_URL
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.WeakReference
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
-
 
 
 class NimbblCheckoutSDK private constructor() {

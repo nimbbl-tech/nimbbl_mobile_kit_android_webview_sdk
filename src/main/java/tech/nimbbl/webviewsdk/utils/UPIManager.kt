@@ -5,27 +5,20 @@ Created by Sandeep Yadav on 23/07/25.
 Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.data.models.payment.UpiAppsVo
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.R
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
-import android.app.Activity
-import kotlin.collections.listOf
-import kotlin.collections.mapOf
-import kotlin.text.isNullOrEmpty
-import kotlin.collections.mutableListOf
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 
 /**
  * Manager class for handling UPI (Unified Payments Interface) operations
