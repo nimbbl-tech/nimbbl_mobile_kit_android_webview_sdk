@@ -11,14 +11,14 @@ pluginManagement {
         }
     }
     plugins {
-        id("com.android.library") version "8.10.1" apply false // Ensure consistency
+        id("com.android.library") version "8.11.1" apply false // Ensure consistency
         kotlin("android") version "1.9.0" apply false  // Ensure consistency
     }
 
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()

@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("com.android.library")
-    kotlin("android")
+    kotlin("android") version "1.9.0"
     id("maven-publish")
 }
 
@@ -31,12 +31,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
@@ -47,27 +47,28 @@ tasks.register<Wrapper>("nimbbl_webviewsdk_wrapper") {
 tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel") {}
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.10.1")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("com.google.android.material:material:1.12.0")
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     
     // Core API SDK dependency
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-1")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-10")
     
-    // JAXB dependencies for JDK 11 compatibility
-    implementation("javax.xml.bind:jaxb-api:2.3.1")
-    implementation("org.glassfish.jaxb:jaxb-runtime:2.3.1")
+    // JAXB dependencies are included via the core API SDK dependency
+    // implementation("javax.xml.bind:jaxb-api:2.3.1")
+    // implementation("org.glassfish.jaxb:jaxb-runtime:2.3.1")
+    // implementation("javax.activation:activation:1.1.1")
 }
 
 // Optional: include sources in the published artifact
@@ -82,8 +83,8 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
                 
-                // Include sources jar
-                artifact(sourcesJar)
+                // Include sources jar with explicit dependency
+                artifact(sourcesJar.get())
 
                 groupId = "com.github.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
@@ -93,13 +94,6 @@ afterEvaluate {
                     name.set("nimbbl-checkout-sdk")
                     description.set("Nimbbl Checkout SDK for Android")
                 }
-            }
-        }
-
-        repositories {
-            maven {
-                name = "jitpack"
-                url = uri("$buildDir/repo")
             }
         }
     }
