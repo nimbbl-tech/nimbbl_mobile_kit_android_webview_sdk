@@ -107,6 +107,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             onFailedPayment(getString(R.string.input_sent_invalid))
         }
     }
+
     // Apply status bar background + icon color
     fun Activity.applyStatusBarStyle(colorResId: Int) {
         val color = ContextCompat.getColor(this, colorResId)
@@ -130,6 +131,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         return nightMode != Configuration.UI_MODE_NIGHT_YES
     }
+
     private fun initializeManagers() {
         webViewManager = WebViewManager(this, webView)
         upiManager = UPIManager(this)
@@ -182,7 +184,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         } else {
                             onFailedPayment(getString(R.string.error_in_update_order))
                         }
-                    }else {
+                    } else {
                         onFailedPayment(getString(R.string.error_in_update_order))
                     }
                 }
@@ -217,16 +219,18 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             if (is_debug_enabled) {
                 Log.d(PaymentConstants.TAG_SAN, "openUpiIntent-->$parameters")
             }
-            
+
             // Add validation before processing
             if (!options.orderToken?.let {
-                    upiManager.validateUPIParameters(parameters,orderID,
-                        it,subMerchantId)
+                    upiManager.validateUPIParameters(
+                        parameters, orderID,
+                        it, subMerchantId
+                    )
                 }!!) {
                 Log.w(TAG, "Invalid UPI parameters received, ignoring")
                 return
             }
-            
+
             runOnUiThread {
                 try {
                     // Check if activity is destroyed before proceeding
@@ -234,10 +238,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         Log.w(TAG, "Activity is destroyed, ignoring UPI intent")
                         return@runOnUiThread
                     }
-                    
+
                     // Validate UPI parameters
-                    if (!upiManager.validateUPIParameters(parameters,orderID,
-                            options.orderToken.toString(),subMerchantId)) {
+                    if (!upiManager.validateUPIParameters(
+                            parameters, orderID,
+                            options.orderToken.toString(), subMerchantId
+                        )
+                    ) {
                         if (is_debug_enabled) {
                             Log.w(TAG, "Invalid UPI parameters received")
                         }
@@ -259,7 +266,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         subMerchantId,
                         mapOf<String, Any>(
                             "package_name" to packageName,
-                            "transaction_id" to transactionID,
+                            "transactionId" to transactionID,
                             "upi_url" to url
                         ),
                         PaymentConstants.SDK_VERSION
@@ -268,7 +275,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     val intent = Intent(Intent.ACTION_VIEW)
                     intent.data = Uri.parse(url)
                     intent.setPackage(packageName)
-                    
+
                     // Add intent resolution check
                     if (intent.resolveActivity(packageManager) != null) {
                         resultLauncher.launch(intent)
@@ -437,7 +444,8 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 subMerchantId,
                 mapOf<String, Any>(
                     "result_code" to result.resultCode.toString(),
-                    "result_data" to (result.data?.toString() ?: "null")
+                    "result_data" to (result.data?.toString() ?: "null"),
+                    "transactionId" to transactionID
                 ),
                 PaymentConstants.SDK_VERSION
             )
@@ -483,14 +491,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         isActivityDestroyed = true
-        
+
         // Clean up WebView resources
         try {
             webViewManager.destroy()
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying WebView manager: ${e.message}", e)
         }
-        
+
         // Clean up SDK resources
         try {
             NimbblCheckoutSDK.instance?.cleanup()

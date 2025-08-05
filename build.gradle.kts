@@ -40,9 +40,6 @@ android {
     }
 }
 
-tasks.register<Wrapper>("nimbbl_webviewsdk_wrapper") {
-    gradleVersion = "8.11.1"
-}
 
 tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel") {}
 
@@ -56,25 +53,19 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("com.squareup.retrofit2:retrofit:3.0.0")
-    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
     // Core API SDK dependency
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-10")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-21")
     
     // JAXB dependencies are included via the core API SDK dependency
     // implementation("javax.xml.bind:jaxb-api:2.3.1")
     // implementation("org.glassfish.jaxb:jaxb-runtime:2.3.1")
     // implementation("javax.activation:activation:1.1.1")
-}
-
-// Optional: include sources in the published artifact
-val sourcesJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("sources")
-    from(android.sourceSets["main"].java.srcDirs)
 }
 
 afterEvaluate {
@@ -83,12 +74,12 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
                 
-                // Include sources jar with explicit dependency
-                artifact(sourcesJar.get())
+                // The sources jar is automatically included by the Android library component
+                // No need to manually add it to avoid duplicates
 
                 groupId = "com.github.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
-                version = "3.0.8"
+                version = "3.0.8-snapshot-11"
 
                 pom {
                     name.set("nimbbl-checkout-sdk")

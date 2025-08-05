@@ -4,14 +4,11 @@ pluginManagement {
         gradlePluginPortal()
         mavenCentral()
         maven {
-            url = uri("https://gitlab.com/api/v4/projects/25847308/packages/maven")
-        }
-        maven {
             url = uri("https://jitpack.io")
         }
     }
     plugins {
-        id("com.android.library") version "8.11.1" apply false // Ensure consistency
+        id("com.android.library") version "8.10.1" apply false // Ensure consistency
         kotlin("android") version "1.9.0" apply false  // Ensure consistency
     }
 
@@ -23,14 +20,11 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven {
-            url = uri("https://gitlab.com/api/v4/projects/25847308/packages/maven")
-        }
-        maven {
             url = uri("https://jitpack.io")
         }
     }
 }
 
 // Include Core API SDK as a dependency
-// include(":nimbbl_mobile_kit_core_api_sdk")
-// project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")
+//include(":nimbbl_mobile_kit_core_api_sdk")
+//project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")

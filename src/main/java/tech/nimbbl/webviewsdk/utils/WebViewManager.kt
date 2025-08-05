@@ -25,6 +25,9 @@ import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
+import kotlin.collections.mapOf
+import kotlin.text.startsWith
+import kotlin.apply
 
 /**
  * Manager class for handling WebView operations and configuration
