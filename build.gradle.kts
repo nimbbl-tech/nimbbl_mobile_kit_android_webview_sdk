@@ -31,12 +31,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
 }
 
@@ -47,7 +47,7 @@ tasks.register<Wrapper>("nimbbl_webviewsdk_wrapper") {
 tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel") {}
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
+    kotlinOptions.jvmTarget = "11"
 }
 
 dependencies {
@@ -63,7 +63,11 @@ dependencies {
     
     // Core API SDK dependency
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("tech.nimbbl.sdk:nimbbl-checkout-core-sdk-java:3.0.8")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.8-snapshot-1")
+    
+    // JAXB dependencies for JDK 11 compatibility
+    implementation("javax.xml.bind:jaxb-api:2.3.1")
+    implementation("org.glassfish.jaxb:jaxb-runtime:2.3.1")
 }
 
 // Optional: include sources in the published artifact
@@ -77,6 +81,9 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
+                
+                // Include sources jar
+                artifact(sourcesJar)
 
                 groupId = "com.github.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
