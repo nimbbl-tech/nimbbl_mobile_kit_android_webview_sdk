@@ -192,7 +192,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             onFailedPayment(getString(R.string.error_in_update_order))
         }
-        NimbblCheckoutSDK.instance?.setMyActivityWeakReference(this)
+        NimbblCheckoutSDK.getInstance().setMyActivityWeakReference(this)
     }
 
 
@@ -220,17 +220,6 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 Log.d(PaymentConstants.TAG_SAN, "openUpiIntent-->$parameters")
             }
 
-            // Add validation before processing
-            if (!options.orderToken?.let {
-                    upiManager.validateUPIParameters(
-                        parameters, orderID,
-                        it, subMerchantId
-                    )
-                }!!) {
-                Log.w(TAG, "Invalid UPI parameters received, ignoring")
-                return
-            }
-
             runOnUiThread {
                 try {
                     // Check if activity is destroyed before proceeding
@@ -239,7 +228,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         return@runOnUiThread
                     }
 
-                    // Validate UPI parameters
+                    // Validate UPI parameters (single validation call)
                     if (!upiManager.validateUPIParameters(
                             parameters, orderID,
                             options.orderToken.toString(), subMerchantId
@@ -461,7 +450,6 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     private fun onFailedPayment(errorStr: String) {
         paymentHandler.handlePaymentFailure(
-            errorStr,
             orderID,
             options.orderToken!!,
             subMerchantId = subMerchantId
@@ -501,7 +489,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
         // Clean up SDK resources
         try {
-            NimbblCheckoutSDK.instance?.cleanup()
+            NimbblCheckoutSDK.getInstance().cleanup()
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning up SDK: ${e.message}", e)
         }

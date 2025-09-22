@@ -109,51 +109,12 @@ class UPIManager(private val context: Context) {
             false
         }
     }
-    
-    /**
-     * Get list of installed UPI apps
-     * @return List of package names for installed UPI apps
-     */
-    fun getInstalledUPIApps(): List<String> {
-        val upiApps = mutableListOf<String>()
-        val commonUPIApps = listOf(
-            "com.google.android.apps.nbu.paisa.user", // Google Pay
-            "com.phonepe.app", // PhonePe
-            "net.one97.paytm", // Paytm
-            "in.amazonpay", // Amazon Pay
-            "com.mobikwik_new", // Mobikwik
-            "com.freecharge", // FreeCharge
-            "com.olacabs.customer", // Ola Money
-            "com.airtel.airtelmoney", // Airtel Money
-            "com.jio.myjio", // Jio Money
-            "com.icici.bank.imobile", // iMobile
-            "com.hdfcbank.hdfcpay", // HDFC Pay
-            "com.sbi.SBIFreedomPlus", // SBI Yono
-            "com.axis.bank.axismobile", // Axis Mobile
-            "com.kotak.mobilebanking", // Kotak Mobile Banking
-            "com.unionbankofindia.mobilebanking", // Union Bank Mobile Banking
-            "com.icici.bank.imobile", // ICICI iMobile
-            "com.hdfcbank.hdfcpay", // HDFC Pay
-            "com.sbi.SBIFreedomPlus", // SBI Yono
-            "com.axis.bank.axismobile", // Axis Mobile
-            "com.kotak.mobilebanking", // Kotak Mobile Banking
-            "com.unionbankofindia.mobilebanking" // Union Bank Mobile Banking
-        )
-        
-        for (packageName in commonUPIApps) {
-            if (isUPIAppInstalled(packageName)) {
-                upiApps.add(packageName)
-            }
-        }
-        
-        return upiApps
-    }
-    
+
     /**
      * Create JSON object with UPI apps information for WebView
      * @return JSON object containing UPI apps data
      */
-    fun createUPIAppsJSON(orderID: String, orderToken: String, subMerchantId: String): JSONObject {
+    fun createUPIAppsJSON(): JSONObject {
         val packageManager = context.packageManager
         val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_DEFAULT)
@@ -196,31 +157,6 @@ class UPIManager(private val context: Context) {
                 val appObj = JSONObject().apply {
                     put("upi_app_name", resolveInfo.loadLabel(packageManager).toString())
                     put("package_name", resolveInfo.activityInfo.packageName)
-                    
-                    // Get app icon
-                    val icon: Drawable = try {
-                        packageManager.getApplicationIcon(resolveInfo.activityInfo.packageName)
-                    } catch (e: Exception) {
-                        if (is_debug_enabled) {
-                            Log.w(TAG, "Error loading app icon for ${resolveInfo.activityInfo.packageName}: ${e.message}")
-                        }
-                        // Log exception event
-                        EventLoggingUtils.safeLogEvent(
-                            context,
-                            EventConstants.EXCEPTION_THROWN,
-                            orderID,
-                            orderToken,
-                            subMerchantId,
-                            mapOf<String, Any>(
-                                "error" to (e.message ?: "Unknown error"),
-                                "location" to "UPI app icon loading",
-                                "package_name" to resolveInfo.activityInfo.packageName
-                            ),
-                            SDK_VERSION
-                        )
-                        // Fallback to default UPI icon
-                        context.resources.getDrawable(R.drawable.upi, null)
-                    }
                 }
                 jsonArray.put(appObj)
             }

@@ -36,9 +36,6 @@ class WebViewManager(
     
     companion object {
         private const val TAG = "WebViewManager"
-        private const val ERROR_HOST_LOOKUP = 101
-        private const val ERROR_TIMEOUT = 102
-        private const val ERROR_CONNECT = 103
         private const val ERROR_SSL_HANDSHAKE = 104
     }
     
@@ -96,14 +93,35 @@ class WebViewManager(
     }
     
     /**
-     * Configure WebView settings
+     * Configure WebView settings with security enhancements
      */
     private fun configureWebViewSettings() {
         webView.settings.apply {
+            // Basic functionality settings
             domStorageEnabled = true
             javaScriptEnabled = true
             setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = true
+            
+            // Security enhancements
+            setAllowFileAccess(false)
+            setAllowContentAccess(false)
+            setAllowFileAccessFromFileURLs(false)
+            setAllowUniversalAccessFromFileURLs(false)
+            
+            // Mixed content security
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)
+            }
+            
+            // Safe browsing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                setSafeBrowsingEnabled(true)
+            }
+            
+            // Additional security settings
+            setGeolocationEnabled(false)
+            setDatabaseEnabled(false)
         }
     }
     
@@ -247,7 +265,7 @@ class WebViewManager(
         }
         
         val upiManager = UPIManager(context)
-        val upiAppsJSON = upiManager.createUPIAppsJSON(orderID, orderToken, subMerchantId)
+        val upiAppsJSON = upiManager.createUPIAppsJSON()
 
         // Log UPI apps listed event
         EventLoggingUtils.safeLogEvent(
@@ -270,34 +288,7 @@ class WebViewManager(
             Log.d(TAG, "UPI intents sent successfully")
         }
     }
-    
-    /**
-     * Reset the initial page loaded flag (useful for testing or page refreshes)
-     */
-    fun resetInitialPageLoaded() {
-        isInitialPageLoaded = false
-        if (is_debug_enabled) {
-            Log.d(TAG, "Reset initial page loaded flag")
-        }
-    }
-    
-    /**
-     * Reset the webview loaded event flag (useful for testing or new sessions)
-     */
-    fun resetWebViewLoadedEvent() {
-        isWebViewLoadedEventLogged = false
-        if (is_debug_enabled) {
-            Log.d(TAG, "Reset webview loaded event flag")
-        }
-    }
-    
-    /**
-     * Check if UPI intents have been sent
-     * @return true if UPI intents have been sent
-     */
-    fun hasUpiIntentsBeenSent(): Boolean {
-        return isInitialPageLoaded
-    }
+
     
     /**
      * Setup WebChrome client for handling new windows

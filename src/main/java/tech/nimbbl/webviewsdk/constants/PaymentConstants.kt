@@ -14,10 +14,8 @@ object PaymentConstants {
     
     // Debug flag - automatically false in release builds
     val is_debug_enabled = BuildConfig.DEBUG
-    
-    // Centralized SDK Version - Single source of truth for WebView SDK
-    const val SDK_VERSION_CENTRAL = "3.0.12"
-    const val SDK_VERSION = SDK_VERSION_CENTRAL // Reference to centralized version
+
+    val SDK_VERSION = BuildConfig.SDK_VERSION // Reference to centralized version from build.gradle.kts
     
     // SDK Initialization Errors
     const val ERROR_CODE_INIT_FAILED = "INIT_001"
@@ -27,7 +25,7 @@ object PaymentConstants {
     
     // Generic Errors
     const val ERROR_CODE_UNKNOWN_ERROR = "UNKNOWN_001"
-    const val ERROR_MESSAGE_UNKNOWN_ERROR = "There seems to be some issue , Please try after sometime.. use above to send the object  in response"
+    const val ERROR_MESSAGE_UNKNOWN_ERROR = "There seems to be some issue , Please try after sometime."
     const val NIMBBL_ERROR_CODE_UNKNOWN_ERROR = "MERCHANT_SDK_ERROR"
     const val CUSTOMER_MESSAGE_UNKNOWN_ERROR = "There is some technical issue, kindly reach out to the merchant"
     
@@ -82,9 +80,8 @@ object PaymentConstants {
     const val JAVASCRIPT_INTERFACE_NAME = "NimbblSDK"
     
     // Broadcast actions
-    const val BROADCAST_PAYMENT_SUCCESS = "PaymentSuccess"
-    const val BROADCAST_PAYMENT_FAILURE = "PaymentFailure"
-    
+    const val BROADCAST_PAYMENT_RESULT = "PaymentResult"
+
     // Broadcast extras
     const val EXTRA_PAYMENT_DATA = "data"
     
@@ -94,11 +91,7 @@ object PaymentConstants {
     
     // UPI intent responses
     const val UPI_INTENT_BACK_RESPONSE_CLOSE = "close"
-    
-    // JSON Payload Keys (moved from Core API SDK for sample app compatibility)
-    const val key_nimbbl_merchant_message = "nimbbl_merchant_message"
-    const val key_nimbbl_error_code = "nimbbl_error_code"
-    const val key_nimbbl_consumer_message = "nimbbl_consumer_message"
+
     
     // WebView JavaScript functions
     const val JS_FUNCTION_POST_MESSAGE = "window.postMessage"
@@ -110,12 +103,6 @@ object PaymentConstants {
     
     // Debug log prefixes
     const val DEBUG_ORDER_ID_PREFIX = "orderID-->"
-    const val DEBUG_URL_PREFIX = "url---->"
-    const val DEBUG_TEXT_PREFIX = "text-->"
-    const val DEBUG_MAIN_OBJ_PREFIX = "mainobj--->"
-    const val DEBUG_RESULT_PREFIX = "resultCode-->"
-    const val DEBUG_CURRENT_URL_PREFIX = "currentUrl: "
-    const val DEBUG_EXPECTED_URL_PREFIX = "expected url: "
     const val DEBUG_BASE_URL_PREFIX = "BaseURL"
     
     // URL building
@@ -145,4 +132,4 @@ object PaymentConstants {
     // Callback modes
     const val CALLBACK_MODE_MOBILE = "callback_mobile"
     const val PLATFORM_TYPE_ANDROID = "android"
-} 
+}

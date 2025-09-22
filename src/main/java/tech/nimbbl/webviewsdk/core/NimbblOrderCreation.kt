@@ -13,7 +13,7 @@ import tech.nimbbl.webviewsdk.models.CreateOrderResponse
  * Order creation functionality for the Nimbbl WebView SDK
  * This delegates to the Core API SDK for order creation
  */
-object NimbblOrderCreation {
+object NimbblShopOrderCreation {
     
     /**
      * Create a new order
@@ -27,7 +27,7 @@ object NimbblOrderCreation {
      * @param subPaymentMode Sub payment mode (optional)
      * @return Response containing the created order details
      */
-    suspend fun createOrder(
+    suspend fun createShopOrder(
         shopBaseUrl: String,
         totalAmount: Int,
         emailId: String,
