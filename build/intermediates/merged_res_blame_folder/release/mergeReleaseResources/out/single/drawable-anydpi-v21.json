@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_decline_low.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_decline_low.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_answer_video.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_answer_video.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_answer.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_answer.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_decline.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_decline.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_answer_video_low.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_answer_video_low.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/drawable-anydpi-v21/ic_call_answer_low.xml",
+        "source": "tech.nimbbl.webviewsdk-core-1.13.0-25:/drawable-anydpi-v21/ic_call_answer_low.xml"
+    }
+]

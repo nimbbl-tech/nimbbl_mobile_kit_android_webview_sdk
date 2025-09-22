@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/layout-v26/mtrl_calendar_month.xml",
+        "source": "tech.nimbbl.webviewsdk-material-1.12.0-3:/layout-v26/mtrl_calendar_month.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/layout-v26/abc_screen_toolbar.xml",
+        "source": "tech.nimbbl.webviewsdk-appcompat-1.6.1-11:/layout-v26/abc_screen_toolbar.xml"
+    }
+]

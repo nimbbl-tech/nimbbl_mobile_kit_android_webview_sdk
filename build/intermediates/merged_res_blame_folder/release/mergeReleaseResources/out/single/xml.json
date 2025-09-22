@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/xml/data_extraction_rules.xml",
+        "source": "tech.nimbbl.webviewsdk-jetified-nimbbl_mobile_kit_core_api_sdk-v4.0.0-SNAPSHOT-20250922-135409-8695bbf-10:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "tech.nimbbl.webviewsdk-release-31:/xml/backup_rules.xml",
+        "source": "tech.nimbbl.webviewsdk-jetified-nimbbl_mobile_kit_core_api_sdk-v4.0.0-SNAPSHOT-20250922-135409-8695bbf-10:/xml/backup_rules.xml"
+    }
+]

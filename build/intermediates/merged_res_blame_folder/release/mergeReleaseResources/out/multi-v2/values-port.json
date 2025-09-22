@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "tech.nimbbl.webviewsdk-mergeReleaseResources-29:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "/Users/sandeepyadav/.gradle/caches/8.11.1/transforms/5bfdda514322892d82e1103e355528e7/transformed/appcompat-1.6.1/res/values-port/values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "tech.nimbbl.webviewsdk-release-31:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "/Users/sandeepyadav/.gradle/caches/8.11.1/transforms/5bfdda514322892d82e1103e355528e7/transformed/appcompat-1.6.1/res/values-port/values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}

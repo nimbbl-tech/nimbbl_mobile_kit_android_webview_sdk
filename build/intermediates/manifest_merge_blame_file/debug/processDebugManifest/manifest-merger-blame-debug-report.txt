@@ -1,0 +1,47 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="tech.nimbbl.webviewsdk" >
+4
+5    <uses-sdk android:minSdkVersion="21" />
+6
+7    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+7-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:4:5-78
+7-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:4:22-76
+8    <uses-permission android:name="android.permission.INTERNET" />
+8-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:5:5-67
+8-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:5:22-64
+9
+10    <queries>
+10-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:14:5-24:15
+11        <intent>
+11-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:15:9-23:18
+12            <action android:name="android.intent.action.VIEW" />
+12-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:16:13-65
+12-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:16:21-62
+13
+14            <category android:name="android.intent.category.DEFAULT" />
+14-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:18:13-72
+14-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:18:23-69
+15
+16            <data
+16-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:20:13-22:40
+17                android:host="pay"
+17-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:21:17-35
+18                android:scheme="upi" />
+18-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:22:17-37
+19        </intent>
+20    </queries>
+21
+22    <application>
+22-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:7:5-12:19
+23        <activity
+23-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:8:9-11:57
+24            android:name="tech.nimbbl.webviewsdk.ui.activity.NimbblCheckoutMainActivity"
+24-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:9:13-67
+25            android:exported="false"
+25-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:10:13-37
+26            android:windowSoftInputMode="adjustResize" />
+26-->/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk/src/main/AndroidManifest.xml:11:13-55
+27    </application>
+28
+29</manifest>

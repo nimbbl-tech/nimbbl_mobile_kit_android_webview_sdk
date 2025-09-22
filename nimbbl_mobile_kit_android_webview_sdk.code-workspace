@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../nimbbl_mobile_kit_core_api_sdk"
+		},
+		{
+			"path": "../nimbbl_mobile_android_sample_app"
+		}
+	],
+	"settings": {}
+}

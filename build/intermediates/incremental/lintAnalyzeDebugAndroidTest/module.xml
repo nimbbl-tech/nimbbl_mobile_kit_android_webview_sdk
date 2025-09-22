@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_android_webview_sdk"
+    name=":"
+    type="LIBRARY"
+    maven=":nimbbl_mobile_kit_android_webview_sdk:unspecified"
+    agpVersion="8.10.1"
+    buildFolder="build"
+    bootClassPath="/Users/sandeepyadav/Library/Android/sdk/platforms/android-34/android.jar:/Users/sandeepyadav/Library/Android/sdk/build-tools/35.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="17"
+    compileTarget="android-34"
+    neverShrinking="true">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="debug"/>
+</lint-module>
