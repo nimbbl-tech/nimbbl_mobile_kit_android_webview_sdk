@@ -416,7 +416,7 @@ echo "    maven { url 'https://jitpack.io' }"
 echo "}"
 echo
 echo "dependencies {"
-echo "    implementation 'org.bitbucket.$BITBUCKET_USERNAME:$REPO_NAME:$VERSION_TAG'"
+echo "    implementation 'org.bitbucket.nimbbl-tech:$REPO_NAME:$VERSION_TAG'"
 echo "}"
 echo "----------------------------------------"
 echo
