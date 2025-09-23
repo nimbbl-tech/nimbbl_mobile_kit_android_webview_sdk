@@ -74,7 +74,7 @@ dependencies {
     // Core API SDK dependency
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
-    implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.0-SNAPSHOT-20250922-135409-8695bbf")
+    implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.0")
     
     
     // JAXB dependencies are included via the core API SDK dependency
@@ -90,14 +90,14 @@ afterEvaluate {
                 from(components["release"])
                 
                 // JitPack coordinates (for backward compatibility)
-                groupId = "com.github.nimbbl-tech"
+                groupId = "com.github.tools21"
                 artifactId = "nimbbl-checkout-sdk"
                 version = versionProperties.getProperty("SDK_VERSION", "1.0.0")
 
                 pom {
                     name.set("nimbbl-checkout-sdk")
                     description.set("Nimbbl Checkout SDK for Android - Semantic Version ${versionProperties.getProperty("SDK_VERSION", "1.0.0")}")
-                    url.set("https://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk")
+                    url.set("https://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk")
                     
                     licenses {
                         license {
@@ -108,16 +108,16 @@ afterEvaluate {
                     
                     developers {
                         developer {
-                            id.set("nimbbl-tech")
+                            id.set("tools21")
                             name.set("Nimbbl Technologies")
                             email.set("tech@nimbbl.tech")
                         }
                     }
                     
                     scm {
-                        connection.set("scm:git:git://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
-                        developerConnection.set("scm:git:ssh://github.com:nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
-                        url.set("https://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk")
+                        connection.set("scm:git:git://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk.git")
+                        developerConnection.set("scm:git:ssh://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk.git")
+                        url.set("https://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk")
                     }
                 }
             }
