@@ -90,7 +90,7 @@ afterEvaluate {
                 from(components["release"])
                 
                 // JitPack coordinates (for backward compatibility)
-                groupId = "com.github.tools21"
+                groupId = "org.bitbucket.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
                 version = versionProperties.getProperty("SDK_VERSION", "1.0.0")
 
