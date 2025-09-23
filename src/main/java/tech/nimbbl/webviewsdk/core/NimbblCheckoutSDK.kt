@@ -625,7 +625,31 @@ class NimbblCheckoutSDK private constructor() {
                         )
                     )
                 } else {
-                    listener?.onCheckoutResponse(jsonString2Map(data))
+                    try {
+                        val parsedData = jsonString2Map(data)
+                        listener?.onCheckoutResponse(parsedData)
+                    } catch (e: Exception) {
+                        if (is_debug_enabled) {
+                            Log.e("NimbblCheckoutSDK", "Error parsing payment response data: ${e.message}")
+                            Log.e("NimbblCheckoutSDK", "Raw data: ${data.take(200)}...")
+                        }
+                        // Log parsing error event (non-blocking)
+                        SDKUtils.logEventWithVersion(
+                            context,
+                            EventConstants.EXCEPTION_THROWN,
+                            null,
+                            null,
+                            null,
+                            mapOf<String, Any>(
+                                "error" to "json_parsing_failed",
+                                "location" to "PaymentEventBroadCastReceiver_PaymentSuccess",
+                                "error_message" to "Failed to parse payment response JSON",
+                                "stack_trace" to SDKUtils.getStackTrace(e)
+                            )
+                        )
+                        // Return empty map as fallback
+                        listener?.onCheckoutResponse(mutableMapOf())
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -650,29 +674,58 @@ class NimbblCheckoutSDK private constructor() {
 
 
 
-    @Throws(JSONException::class)
     private fun jsonString2Map(jsonString: String): MutableMap<String, Any> {
-
         val keys: MutableMap<String, Any> = HashMap()
+        
+        // Validate input
+        if (jsonString.isBlank()) {
+            if (is_debug_enabled) {
+                Log.w("NimbblCheckoutSDK", "jsonString2Map: Empty or blank JSON string provided")
+            }
+            return keys
+        }
+        
         try {
-            val jsonObject = JSONObject(jsonString) // HashMap
-            val keyset: Iterator<*> = jsonObject.keys() // HM
+            val jsonObject = JSONObject(jsonString)
+            
+            // Check if this has a payload field and extract only the payload content
+            if (jsonObject.has("payload")) {
+                val payloadString = jsonObject.optString("payload", "")
+                if (payloadString.isNotEmpty()) {
+                    try {
+                        val payloadJson = JSONObject(payloadString)
+                        val keyset: Iterator<*> = payloadJson.keys()
+                        while (keyset.hasNext()) {
+                            val key = keyset.next() as String
+                            val value = payloadJson[key]
+                            keys[key] = value
+                        }
+                        return keys
+                    } catch (e: JSONException) {
+                        if (is_debug_enabled) {
+                            Log.e("NimbblCheckoutSDK", "jsonString2Map: Error parsing payload JSON: ${e.message}")
+                        }
+                    }
+                }
+            }
+            
+            // Fallback to original behavior if no payload field or parsing fails
+            val keyset: Iterator<*> = jsonObject.keys()
             while (keyset.hasNext()) {
                 val key = keyset.next() as String
                 val value = jsonObject[key]
-                //System.out.print("\n Key : "+key);
-                if (value is JSONObject) {
-                    //System.out.println("Incomin value is of JSONObject : ");
-                    keys[key] = jsonString2Map(value.toString())
-                } else {
-                    keys[key] = value
-                }
+                keys[key] = value
             }
         } catch (e: JSONException) {
             if (is_debug_enabled) {
                 Log.e("NimbblCheckoutSDK", "jsonString2Map: JSON parsing error: ${e.message}")
             }
+        } catch (e: Exception) {
+            if (is_debug_enabled) {
+                Log.e("NimbblCheckoutSDK", "jsonString2Map: Unexpected error: ${e.message}")
+            }
         }
+        
         return keys
     }
 
