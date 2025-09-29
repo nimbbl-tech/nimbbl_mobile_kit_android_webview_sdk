@@ -8,9 +8,7 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 import android.content.Context
 import android.util.Log
 import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_API_URL_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_LISTENER_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_OPTIONS_NULL
@@ -20,6 +18,7 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_SUB
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_TOKEN_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_INIT_FAILED
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_UNKNOWN_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import java.io.PrintWriter
 import java.io.StringWriter
 

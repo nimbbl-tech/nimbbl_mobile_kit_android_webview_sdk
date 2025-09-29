@@ -8,7 +8,6 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
-import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions.Builder
 
 /**
  * This class represents the options when opening Nimbbl checkout. The user can create an

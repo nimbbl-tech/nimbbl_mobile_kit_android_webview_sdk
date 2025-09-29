@@ -11,7 +11,6 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.core.net.toUri
 import org.json.JSONException
-import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
@@ -21,7 +20,6 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_UNKNOWN_E
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_PAYMENT_DATA
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.RESPONSE_QUERY_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
-import java.net.URLDecoder
 
 /**
  * Handler class for managing payment success and failure scenarios
