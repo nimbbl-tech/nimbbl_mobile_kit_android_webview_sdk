@@ -25,6 +25,6 @@ dependencyResolutionManagement {
     }
 }
 
-// Include Core API SDK as a dependency
-//include(":nimbbl_mobile_kit_core_api_sdk")
-//project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_core_api_sdk")
+// Core API SDK is now included as a published dependency
+// include(":nimbbl_mobile_kit_core_api_sdk")
+// project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/Documents/nimbbl_bitbucket_repos/nimbbl_mobile_kit_core_api_sdk")

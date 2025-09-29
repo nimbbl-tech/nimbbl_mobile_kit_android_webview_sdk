@@ -9,14 +9,12 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
-import tech.nimbbl.webviewsdk.R
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 

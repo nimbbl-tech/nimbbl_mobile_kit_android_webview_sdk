@@ -15,7 +15,6 @@ import android.os.Bundle
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.widget.LinearLayout
 import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedCallback
@@ -72,9 +71,10 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_nimbbl_checkout_main)
+        
         // Enable edge-to-edge drawing
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        val rootView = findViewById<LinearLayout>(R.id.ll_main_activity)
+        val rootView = findViewById<android.widget.FrameLayout>(R.id.ll_main_activity)
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, insets ->
             val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(
@@ -84,6 +84,10 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
         webView = findViewById(R.id.webview)
+        
+        // Show loading state IMMEDIATELY to prevent white screen (after webView is initialized)
+        showLoadingState()
+        
         applyStatusBarStyle(R.color.status_bar_color)
         applyNavigationBarStyle(R.color.navigation_bar_color)
 
@@ -93,6 +97,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         if (intent.hasExtra(PaymentConstants.EXTRA_TAG_OPTIONS)) {
             options = intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)!!
             if (!isNetConnected(this)) {
+                hideLoadingState()
                 onFailedPayment(getString(R.string.no_internet))
             } else {
                 orderID = parseJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
@@ -104,6 +109,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 updateOrder(options.orderToken!!, orderID)
             }
         } else {
+            hideLoadingState()
             onFailedPayment(getString(R.string.input_sent_invalid))
         }
     }
@@ -136,6 +142,16 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         webViewManager = WebViewManager(this, webView)
         upiManager = UPIManager(this)
         paymentHandler = PaymentHandler(this)
+        
+        // Set callback for when WebView finishes loading
+        webViewManager.setOnPageFinishedCallback {
+            runOnUiThread {
+                // Small delay to ensure WebView content is fully painted
+                webView.postDelayed({
+                    hideLoadingState()
+                }, 100) // 100ms delay for content painting
+            }
+        }
     }
 
     private fun updateOrder(token: String, orderId: String) {
@@ -210,6 +226,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             INimmbleWebViewInterface(this),
             PaymentConstants.JAVASCRIPT_INTERFACE_NAME
         )
+        
+        // Don't hide loading state here - wait for WebView to actually finish loading
+        // The loading state will be hidden in onPageFinished callback
     }
 
     inner class INimmbleWebViewInterface(private val mContext: Context) {
@@ -496,5 +515,155 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     }
 
     // Bitmap conversion is now handled by UPIManager
+
+    /**
+     * Show loading state immediately to prevent white screen
+     */
+    private fun showLoadingState() {
+        try {
+            // Find shimmer view
+            val shimmerView = findViewById<android.view.View>(R.id.shimmer_layout)
+            
+            // Show shimmer layout
+            shimmerView?.visibility = android.view.View.VISIBLE
+            
+            // Hide WebView initially
+            webView.visibility = android.view.View.GONE
+            
+            // Start shimmer animation
+            if (shimmerView != null) {
+                startShimmerAnimation(shimmerView)
+            }
+            
+            if (is_debug_enabled) {
+                Log.d(TAG, "Shimmer loading state shown")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing loading state: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Hide loading state when WebView is ready
+     */
+    private fun hideLoadingState() {
+        try {
+            // Find shimmer view
+            val shimmerView = findViewById<android.view.View>(R.id.shimmer_layout)
+            
+            // Stop shimmer animation
+            if (shimmerView != null) {
+                shimmerView.clearAnimation()
+            }
+            
+            // Hide shimmer with smooth transition
+            shimmerView?.animate()?.alpha(0f)?.setDuration(300)?.withEndAction {
+                shimmerView.visibility = android.view.View.GONE
+                showWebView()
+            }
+            
+            if (is_debug_enabled) {
+                Log.d(TAG, "Shimmer loading state hidden")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding loading state: ${e.message}", e)
+            // Fallback: just show WebView
+            showWebView()
+        }
+    }
+
+    /**
+     * Show WebView with smooth transition
+     */
+    private fun showWebView() {
+        try {
+            webView.visibility = android.view.View.VISIBLE
+            webView.alpha = 0f
+            webView.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+                
+            if (is_debug_enabled) {
+                Log.d(TAG, "WebView shown with animation")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing WebView: ${e.message}", e)
+            webView.visibility = android.view.View.VISIBLE
+        }
+    }
+
+    /**
+     * Start shimmer animation for loading effect
+     */
+    private fun startShimmerAnimation(view: android.view.View) {
+        try {
+            // Find all shimmer placeholder views and animate them individually
+            val shimmerViews = mutableListOf<android.view.View>()
+            findShimmerViews(view, shimmerViews)
+            
+            // Animate each shimmer view with a slight delay for wave effect
+            shimmerViews.forEachIndexed { index, shimmerView ->
+                val delay = index * 100L // 100ms delay between each item
+                shimmerView.postDelayed({
+                    animateShimmerItem(shimmerView)
+                }, delay)
+            }
+            
+            if (is_debug_enabled) {
+                Log.d(TAG, "Shimmer animation started for ${shimmerViews.size} items")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting shimmer animation: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Recursively find all shimmer placeholder views
+     */
+    private fun findShimmerViews(parent: android.view.View, shimmerViews: MutableList<android.view.View>) {
+        if (parent is android.view.ViewGroup) {
+            for (i in 0 until parent.childCount) {
+                val child = parent.getChildAt(i)
+                if (child.background != null && child.background.constantState != null) {
+                    // Check if this is a shimmer placeholder (has gray background)
+                    shimmerViews.add(child)
+                }
+                findShimmerViews(child, shimmerViews)
+            }
+        }
+    }
+
+    /**
+     * Animate individual shimmer item
+     */
+    private fun animateShimmerItem(view: android.view.View) {
+        if (view.visibility == android.view.View.VISIBLE) {
+            val shimmerRunnable = object : Runnable {
+                override fun run() {
+                    if (view.visibility == android.view.View.VISIBLE) {
+                        view.animate()
+                            .alpha(0.3f)
+                            .setDuration(1200)
+                            .withEndAction {
+                                if (view.visibility == android.view.View.VISIBLE) {
+                                    view.animate()
+                                        .alpha(0.8f)
+                                        .setDuration(1200)
+                                        .withEndAction {
+                                            if (view.visibility == android.view.View.VISIBLE) {
+                                                view.postDelayed(this, 200) // Small delay before next cycle
+                                            }
+                                        }
+                                        .start()
+                                }
+                            }
+                            .start()
+                    }
+                }
+            }
+            view.post(shimmerRunnable)
+        }
+    }
 
 }

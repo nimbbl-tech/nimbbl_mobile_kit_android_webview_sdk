@@ -42,7 +42,17 @@ class WebViewManager(
     private var isInitialPageLoaded = false
     private var isWebViewLoadedEventLogged = false
     private var isDestroyed = false
+    private var onPageFinishedCallback: (() -> Unit)? = null
+    private var hasCallbackBeenInvoked = false
     
+    /**
+     * Set callback for when page finishes loading
+     * @param callback Callback function to execute
+     */
+    fun setOnPageFinishedCallback(callback: () -> Unit) {
+        onPageFinishedCallback = callback
+    }
+
     /**
      * Setup WebView with proper configuration
      * @param url URL to load
@@ -54,6 +64,8 @@ class WebViewManager(
         isInitialPageLoaded = false
         // Reset webview loaded event flag
         isWebViewLoadedEventLogged = false
+        // Reset callback invocation flag
+        hasCallbackBeenInvoked = false
         
         // Log webview launch event
         EventLoggingUtils.safeLogEvent(
@@ -236,6 +248,12 @@ class WebViewManager(
                 if (!isInitialPageLoaded) {
                     sendUpiIntents(orderID, orderToken, subMerchantId)
                     isInitialPageLoaded = true
+                }
+                
+                // Notify callback that page has finished loading (only once)
+                if (!hasCallbackBeenInvoked) {
+                    onPageFinishedCallback?.invoke()
+                    hasCallbackBeenInvoked = true
                 }
             }
         }
