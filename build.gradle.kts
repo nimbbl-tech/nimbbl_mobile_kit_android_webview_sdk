@@ -71,10 +71,10 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
-    // Core API SDK dependency - Latest snapshot version
+    // Core API SDK dependency - Production version
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
-    implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2-SNAPSHOT-20250929-175332-f821776")
+    implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
     
     
     // JAXB dependencies are included via the core API SDK dependency
