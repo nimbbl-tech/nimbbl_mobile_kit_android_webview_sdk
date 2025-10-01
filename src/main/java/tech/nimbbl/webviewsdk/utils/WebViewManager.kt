@@ -78,6 +78,11 @@ class WebViewManager(
             PaymentConstants.SDK_VERSION
         )
         
+        // Configure WebView settings first for better performance
+        configureWebViewSettings()
+        setupWebViewClient(orderID, orderToken,subMerchantId)
+        setupWebChromeClient()
+        
         try {
             webView.loadUrl(url)
         } catch (e: Exception) {
@@ -99,9 +104,6 @@ class WebViewManager(
                 PaymentConstants.SDK_VERSION
             )
         }
-        configureWebViewSettings()
-        setupWebViewClient(orderID, orderToken,subMerchantId)
-        setupWebChromeClient()
     }
     
     /**
@@ -114,6 +116,35 @@ class WebViewManager(
             javaScriptEnabled = true
             setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = true
+            
+            // Performance optimizations for faster rendering
+            setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH)
+            setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
+            
+            // Optimize for mobile
+            setLoadWithOverviewMode(true)
+            setUseWideViewPort(true)
+            setBuiltInZoomControls(false)
+            setDisplayZoomControls(false)
+            
+            // Network optimizations
+            setBlockNetworkImage(false)
+            setBlockNetworkLoads(false)
+            
+            // Additional performance optimizations
+            setMediaPlaybackRequiresUserGesture(false)
+            setAllowFileAccessFromFileURLs(false)
+            setAllowUniversalAccessFromFileURLs(false)
+            
+            // Memory optimizations
+            setMinimumFontSize(8)
+            setMinimumLogicalFontSize(8)
+            
+            // Text rendering optimizations
+            setTextZoom(100)
+            
+            // Layout optimizations
+            setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING)
             
             // Security enhancements
             setAllowFileAccess(false)
@@ -135,6 +166,9 @@ class WebViewManager(
             setGeolocationEnabled(false)
             setDatabaseEnabled(false)
         }
+        
+        // Enable hardware acceleration on the WebView itself
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
     }
     
     /**
@@ -202,6 +236,28 @@ class WebViewManager(
                     ),
                     PaymentConstants.SDK_VERSION
                 )
+            }
+            
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                if (is_debug_enabled) {
+                    Log.d(TAG, "Page started loading: ${url ?: "empty"}")
+                }
+            }
+            
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): android.webkit.WebResourceResponse? {
+                // Optimize resource loading for better performance
+                val url = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    request?.url?.toString()
+                } else {
+                    null
+                }
+                
+                if (is_debug_enabled && url != null) {
+                    Log.d(TAG, "Intercepting request: $url")
+                }
+                
+                return super.shouldInterceptRequest(view, request)
             }
             
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
@@ -440,20 +496,27 @@ class WebViewManager(
             webView.webChromeClient = object : WebChromeClient() {
                 // Dummy implementation to prevent null assignment
             }
-            // Clear settings
+            // Enhanced memory cleanup
             webView.settings.apply {
                 javaScriptEnabled = false
                 domStorageEnabled = false
+                setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE)
             }
-            // Clear cache and data
+            
+            // Clear all caches and data
             webView.clearCache(true)
             webView.clearHistory()
             webView.clearFormData()
+            webView.clearMatches()
+            
+            // Force garbage collection of WebView resources
+            System.gc()
+            
             // Destroy WebView
             webView.destroy()
             isDestroyed = true
             if (is_debug_enabled) {
-                Log.d(TAG, "WebView destroyed successfully")
+                Log.d(TAG, "WebView destroyed successfully with enhanced cleanup")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying WebView: ${e.message}", e)

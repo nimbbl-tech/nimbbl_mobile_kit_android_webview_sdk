@@ -85,6 +85,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         }
         webView = findViewById(R.id.webview)
         
+        // Preload WebView for better performance
+        preloadWebView()
+        
         // Show loading state IMMEDIATELY to prevent white screen (after webView is initialized)
         showLoadingState()
         
@@ -138,6 +141,59 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         return nightMode != Configuration.UI_MODE_NIGHT_YES
     }
 
+    /**
+     * Preload WebView for better performance
+     */
+    private fun preloadWebView() {
+        try {
+            // Enable hardware acceleration for better performance
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+            
+            // Preload WebView with optimized settings for faster initialization
+            webView.settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH)
+                setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
+                
+                // Additional preload optimizations
+                setLoadWithOverviewMode(true)
+                setUseWideViewPort(true)
+                setBuiltInZoomControls(false)
+                setDisplayZoomControls(false)
+                
+                // Memory optimizations
+                setMinimumFontSize(8)
+                setMinimumLogicalFontSize(8)
+                setTextZoom(100)
+                
+                // Layout optimizations
+                setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING)
+            }
+            
+            // Load a minimal HTML page to initialize the WebView engine faster
+            val minimalHtml = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body { margin: 0; padding: 0; background: white; }
+                    </style>
+                </head>
+                <body></body>
+                </html>
+            """.trimIndent()
+            
+            webView.loadDataWithBaseURL(null, minimalHtml, "text/html", "utf-8", null)
+            
+        } catch (e: Exception) {
+            if (is_debug_enabled) {
+                Log.e(TAG, "Error preloading WebView: ${e.message}")
+            }
+        }
+    }
+
     private fun initializeManagers() {
         webViewManager = WebViewManager(this, webView)
         upiManager = UPIManager(this)
@@ -146,10 +202,30 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         // Set callback for when WebView finishes loading
         webViewManager.setOnPageFinishedCallback {
             runOnUiThread {
-                // Small delay to ensure WebView content is fully painted
+                // Reduced delay for faster response - WebView is preloaded
                 webView.postDelayed({
                     hideLoadingState()
-                }, 100) // 100ms delay for content painting
+                }, 50) // 50ms delay for content painting (reduced from 100ms)
+            }
+        }
+        
+        // Additional performance optimization: Warm up the WebView
+        warmUpWebView()
+    }
+    
+    /**
+     * Warm up WebView for optimal performance
+     */
+    private fun warmUpWebView() {
+        try {
+            // Force WebView to initialize its rendering engine
+            webView.post {
+                // This helps initialize the WebView's internal components
+                webView.evaluateJavascript("console.log('WebView warmed up');", null)
+            }
+        } catch (e: Exception) {
+            if (is_debug_enabled) {
+                Log.e(TAG, "Error warming up WebView: ${e.message}")
             }
         }
     }
