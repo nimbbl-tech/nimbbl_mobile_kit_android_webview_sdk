@@ -1,0 +1,13 @@
+jdk:
+  - openjdk17
+
+before_install:
+  - echo "Setting up Java 17 for JitPack build"
+  - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+  - export PATH=$JAVA_HOME/bin:$PATH
+
+install:
+  - echo "Installing dependencies for WebView SDK"
+
+build:
+  - ./gradlew clean assemble publishToMavenLocal -Pgroup=org.bitbucket.nimbbl-tech -Pversion=$TAG_NAME -xtest -xlint

@@ -25,6 +25,6 @@ dependencyResolutionManagement {
     }
 }
 
-// Include Core API SDK as a dependency
+// Include Core API SDK
 //include(":nimbbl_mobile_kit_core_api_sdk")
 //project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")

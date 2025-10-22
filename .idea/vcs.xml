@@ -2,6 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../nimbbl_mobile_kit_core_api_sdk" vcs="Git" />
   </component>
 </project>

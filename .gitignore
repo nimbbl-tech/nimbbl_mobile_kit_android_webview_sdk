@@ -1,1 +1,11 @@
-/build
+/build.env
+build/
+.idea/
+.gradle/
+
+# IDE cache files
+.idea/caches/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries/
+.idea/shelf/

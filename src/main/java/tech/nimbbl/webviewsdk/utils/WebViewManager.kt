@@ -36,16 +36,23 @@ class WebViewManager(
     
     companion object {
         private const val TAG = "WebViewManager"
-        private const val ERROR_HOST_LOOKUP = 101
-        private const val ERROR_TIMEOUT = 102
-        private const val ERROR_CONNECT = 103
         private const val ERROR_SSL_HANDSHAKE = 104
     }
     
     private var isInitialPageLoaded = false
     private var isWebViewLoadedEventLogged = false
     private var isDestroyed = false
+    private var onPageFinishedCallback: (() -> Unit)? = null
+    private var hasCallbackBeenInvoked = false
     
+    /**
+     * Set callback for when page finishes loading
+     * @param callback Callback function to execute
+     */
+    fun setOnPageFinishedCallback(callback: () -> Unit) {
+        onPageFinishedCallback = callback
+    }
+
     /**
      * Setup WebView with proper configuration
      * @param url URL to load
@@ -57,6 +64,8 @@ class WebViewManager(
         isInitialPageLoaded = false
         // Reset webview loaded event flag
         isWebViewLoadedEventLogged = false
+        // Reset callback invocation flag
+        hasCallbackBeenInvoked = false
         
         // Log webview launch event
         EventLoggingUtils.safeLogEvent(
@@ -68,6 +77,11 @@ class WebViewManager(
             mapOf("url" to url),
             PaymentConstants.SDK_VERSION
         )
+        
+        // Configure WebView settings first for better performance
+        configureWebViewSettings()
+        setupWebViewClient(orderID, orderToken,subMerchantId)
+        setupWebChromeClient()
         
         try {
             webView.loadUrl(url)
@@ -90,21 +104,71 @@ class WebViewManager(
                 PaymentConstants.SDK_VERSION
             )
         }
-        configureWebViewSettings()
-        setupWebViewClient(orderID, orderToken,subMerchantId)
-        setupWebChromeClient()
     }
     
     /**
-     * Configure WebView settings
+     * Configure WebView settings with security enhancements
      */
     private fun configureWebViewSettings() {
         webView.settings.apply {
+            // Basic functionality settings
             domStorageEnabled = true
             javaScriptEnabled = true
             setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = true
+            
+            // Performance optimizations for faster rendering
+            setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH)
+            setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
+            
+            // Optimize for mobile
+            setLoadWithOverviewMode(true)
+            setUseWideViewPort(true)
+            setBuiltInZoomControls(false)
+            setDisplayZoomControls(false)
+            
+            // Network optimizations
+            setBlockNetworkImage(false)
+            setBlockNetworkLoads(false)
+            
+            // Additional performance optimizations
+            setMediaPlaybackRequiresUserGesture(false)
+            setAllowFileAccessFromFileURLs(false)
+            setAllowUniversalAccessFromFileURLs(false)
+            
+            // Memory optimizations
+            setMinimumFontSize(8)
+            setMinimumLogicalFontSize(8)
+            
+            // Text rendering optimizations
+            setTextZoom(100)
+            
+            // Layout optimizations
+            setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING)
+            
+            // Security enhancements
+            setAllowFileAccess(false)
+            setAllowContentAccess(false)
+            setAllowFileAccessFromFileURLs(false)
+            setAllowUniversalAccessFromFileURLs(false)
+            
+            // Mixed content security
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)
+            }
+            
+            // Safe browsing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                setSafeBrowsingEnabled(true)
+            }
+            
+            // Additional security settings
+            setGeolocationEnabled(false)
+            setDatabaseEnabled(false)
         }
+        
+        // Enable hardware acceleration on the WebView itself
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
     }
     
     /**
@@ -174,6 +238,28 @@ class WebViewManager(
                 )
             }
             
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                if (is_debug_enabled) {
+                    Log.d(TAG, "Page started loading: ${url ?: "empty"}")
+                }
+            }
+            
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): android.webkit.WebResourceResponse? {
+                // Optimize resource loading for better performance
+                val url = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    request?.url?.toString()
+                } else {
+                    null
+                }
+                
+                if (is_debug_enabled && url != null) {
+                    Log.d(TAG, "Intercepting request: $url")
+                }
+                
+                return super.shouldInterceptRequest(view, request)
+            }
+            
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                 super.doUpdateVisitedHistory(view, url, isReload)
                 if (is_debug_enabled) {
@@ -184,7 +270,7 @@ class WebViewManager(
                 if (url != null) {
                     EventLoggingUtils.safeLogEvent(
                         context,
-                        EventConstants.URL_INTERCEPTED,
+                        EventConstants.REDIRECT_URL_HIT,
                         orderID,
                         orderToken,
                         subMerchantId,
@@ -219,6 +305,12 @@ class WebViewManager(
                     sendUpiIntents(orderID, orderToken, subMerchantId)
                     isInitialPageLoaded = true
                 }
+                
+                // Notify callback that page has finished loading (only once)
+                if (!hasCallbackBeenInvoked) {
+                    onPageFinishedCallback?.invoke()
+                    hasCallbackBeenInvoked = true
+                }
             }
         }
     }
@@ -231,6 +323,15 @@ class WebViewManager(
             if (is_debug_enabled) {
                 Log.d(TAG, "Processing callback URL: $url")
             }
+            EventLoggingUtils.safeLogEvent(
+                context,
+                EventConstants.URL_INTERCEPTED,
+                orderID,
+                orderToken,
+                subMerchantId,
+                mapOf("intercepted_url" to url),
+                PaymentConstants.SDK_VERSION
+            )
             
             // Create payment handler for callback processing
             val paymentHandler = PaymentHandler(context)
@@ -247,7 +348,7 @@ class WebViewManager(
         }
         
         val upiManager = UPIManager(context)
-        val upiAppsJSON = upiManager.createUPIAppsJSON(orderID, orderToken, subMerchantId)
+        val upiAppsJSON = upiManager.createUPIAppsJSON()
 
         // Log UPI apps listed event
         EventLoggingUtils.safeLogEvent(
@@ -270,34 +371,7 @@ class WebViewManager(
             Log.d(TAG, "UPI intents sent successfully")
         }
     }
-    
-    /**
-     * Reset the initial page loaded flag (useful for testing or page refreshes)
-     */
-    fun resetInitialPageLoaded() {
-        isInitialPageLoaded = false
-        if (is_debug_enabled) {
-            Log.d(TAG, "Reset initial page loaded flag")
-        }
-    }
-    
-    /**
-     * Reset the webview loaded event flag (useful for testing or new sessions)
-     */
-    fun resetWebViewLoadedEvent() {
-        isWebViewLoadedEventLogged = false
-        if (is_debug_enabled) {
-            Log.d(TAG, "Reset webview loaded event flag")
-        }
-    }
-    
-    /**
-     * Check if UPI intents have been sent
-     * @return true if UPI intents have been sent
-     */
-    fun hasUpiIntentsBeenSent(): Boolean {
-        return isInitialPageLoaded
-    }
+
     
     /**
      * Setup WebChrome client for handling new windows
@@ -431,20 +505,27 @@ class WebViewManager(
             webView.webChromeClient = object : WebChromeClient() {
                 // Dummy implementation to prevent null assignment
             }
-            // Clear settings
+            // Enhanced memory cleanup
             webView.settings.apply {
                 javaScriptEnabled = false
                 domStorageEnabled = false
+                setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE)
             }
-            // Clear cache and data
+            
+            // Clear all caches and data
             webView.clearCache(true)
             webView.clearHistory()
             webView.clearFormData()
+            webView.clearMatches()
+            
+            // Force garbage collection of WebView resources
+            System.gc()
+            
             // Destroy WebView
             webView.destroy()
             isDestroyed = true
             if (is_debug_enabled) {
-                Log.d(TAG, "WebView destroyed successfully")
+                Log.d(TAG, "WebView destroyed successfully with enhanced cleanup")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying WebView: ${e.message}", e)
@@ -468,7 +549,9 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    Log.d(TAG, "Attempting to reload page after network error")
+                    if (is_debug_enabled) {
+                        Log.d(TAG, "Attempting to reload page after network error")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reloading page: ${e.message}", e)
@@ -485,7 +568,9 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    Log.d(TAG, "Attempting to reload page after timeout error")
+                    if (is_debug_enabled) {
+                        Log.d(TAG, "Attempting to reload page after timeout error")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reloading page: ${e.message}", e)
