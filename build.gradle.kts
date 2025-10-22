@@ -14,6 +14,7 @@ plugins {
     id("maven-publish")
 }
 
+
 android {
     namespace = "tech.nimbbl.webviewsdk"
     compileSdk = versionProperties.getProperty("COMPILE_ANDROID_SDK", "34").toInt()
@@ -71,10 +72,11 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
-    // Core API SDK dependency - Production version
+    // Core API SDK dependency - Use local Maven
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.4")
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
-    implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
+    //implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
     
     
     // JAXB dependencies are included via the core API SDK dependency
@@ -90,14 +92,14 @@ afterEvaluate {
                 from(components["release"])
                 
                 // JitPack coordinates (for backward compatibility)
-                groupId = "org.bitbucket.nimbbl-tech"
+                groupId = "com.github.nimbbl-tech"
                 artifactId = "nimbbl-checkout-sdk"
                 version = versionProperties.getProperty("SDK_VERSION", "1.0.0")
 
                 pom {
                     name.set("nimbbl-checkout-sdk")
                     description.set("Nimbbl Checkout SDK for Android - Semantic Version ${versionProperties.getProperty("SDK_VERSION", "1.0.0")}")
-                    url.set("https://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk")
+                    url.set("https://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk")
                     
                     licenses {
                         license {
@@ -108,19 +110,21 @@ afterEvaluate {
                     
                     developers {
                         developer {
-                            id.set("tools21")
-                            name.set("Nimbbl Technologies")
-                            email.set("tech@nimbbl.tech")
+                            id.set("nimbbl-tech")
+                            name.set("Bigital Technologies Pvt. Ltd")
+                            email.set("tech@nimbbl.biz")
                         }
                     }
                     
                     scm {
-                        connection.set("scm:git:git://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk.git")
-                        developerConnection.set("scm:git:ssh://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk.git")
-                        url.set("https://bitbucket.org/tools21/nimbbl_mobile_kit_android_webview_sdk")
+                        connection.set("scm:git:git://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
+                        developerConnection.set("scm:git:ssh://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
+                        url.set("https://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk")
                     }
                 }
             }
         }
     }
 }
+
+// Core API SDK is now used as a JitPack dependency from GitHub

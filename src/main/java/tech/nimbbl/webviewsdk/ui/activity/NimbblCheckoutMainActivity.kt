@@ -101,7 +101,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             options = intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)!!
             if (!isNetConnected(this)) {
                 hideLoadingState()
-                onFailedPayment(getString(R.string.no_internet))
+                onFailedPayment(getString(R.string.no_internet),false)
             } else {
                 orderID = parseJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
                 subMerchantId =
@@ -113,7 +113,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             }
         } else {
             hideLoadingState()
-            onFailedPayment(getString(R.string.input_sent_invalid))
+            onFailedPayment(getString(R.string.input_sent_invalid),true)
         }
     }
 
@@ -265,24 +265,24 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                                     val jObjError = JSONObject(errorBodyString)
                                     onFailedPayment(
                                         jObjError.getJSONObject(PaymentConstants.JSON_KEY_ERROR)
-                                            .getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE)
+                                            .getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE),true
                                     )
                                 } else {
-                                    onFailedPayment(getString(R.string.error_in_update_order))
+                                    onFailedPayment(getString(R.string.error_in_update_order),true)
                                 }
                             } catch (e: Exception) {
-                                onFailedPayment(getString(R.string.error_in_update_order))
+                                onFailedPayment(getString(R.string.error_in_update_order),true)
                             }
                         } else {
-                            onFailedPayment(getString(R.string.error_in_update_order))
+                            onFailedPayment(getString(R.string.error_in_update_order),true)
                         }
                     } else {
-                        onFailedPayment(getString(R.string.error_in_update_order))
+                        onFailedPayment(getString(R.string.error_in_update_order),true)
                     }
                 }
             }
         } catch (e: Exception) {
-            onFailedPayment(getString(R.string.error_in_update_order))
+            onFailedPayment(e.toString(),true)
         }
         NimbblCheckoutSDK.getInstance().setMyActivityWeakReference(this)
     }
@@ -543,11 +543,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     // WebView client is now handled by WebViewManager
     // Payment handling is now handled by PaymentHandler
 
-    private fun onFailedPayment(errorStr: String) {
+    private fun onFailedPayment(errorStr: String,isSendEvent:Boolean) {
         paymentHandler.handlePaymentFailure(
             orderID,
             options.orderToken!!,
-            subMerchantId = subMerchantId
+            subMerchantId = subMerchantId,
+            errorStr,
+            isSendEvent
         )
     }
 

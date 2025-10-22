@@ -270,7 +270,7 @@ class WebViewManager(
                 if (url != null) {
                     EventLoggingUtils.safeLogEvent(
                         context,
-                        EventConstants.URL_INTERCEPTED,
+                        EventConstants.REDIRECT_URL_HIT,
                         orderID,
                         orderToken,
                         subMerchantId,
@@ -323,6 +323,15 @@ class WebViewManager(
             if (is_debug_enabled) {
                 Log.d(TAG, "Processing callback URL: $url")
             }
+            EventLoggingUtils.safeLogEvent(
+                context,
+                EventConstants.URL_INTERCEPTED,
+                orderID,
+                orderToken,
+                subMerchantId,
+                mapOf("intercepted_url" to url),
+                PaymentConstants.SDK_VERSION
+            )
             
             // Create payment handler for callback processing
             val paymentHandler = PaymentHandler(context)
@@ -540,7 +549,9 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    Log.d(TAG, "Attempting to reload page after network error")
+                    if (is_debug_enabled) {
+                        Log.d(TAG, "Attempting to reload page after network error")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reloading page: ${e.message}", e)
@@ -557,7 +568,9 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    Log.d(TAG, "Attempting to reload page after timeout error")
+                    if (is_debug_enabled) {
+                        Log.d(TAG, "Attempting to reload page after timeout error")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reloading page: ${e.message}", e)

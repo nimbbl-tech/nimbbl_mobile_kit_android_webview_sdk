@@ -20,7 +20,7 @@ if [ -f ".env" ]; then
 fi
 
 # --------- Configuration ---------
-BITBUCKET_USERNAME="$BITBUCKET_USERNAME"
+GITHUB_USERNAME="$GITHUB_USERNAME"
 REPO_NAME="$REPO_NAME"
 VERSION_TAG=$1                   # e.g. v4.1.0
 DRY_RUN=false                    # Set to true for dry run mode
@@ -35,8 +35,8 @@ VERSION_FILE="version.properties"
 validate_environment() {
     local missing_vars=()
     
-    if [ -z "$BITBUCKET_USERNAME" ]; then
-        missing_vars+=("BITBUCKET_USERNAME")
+    if [ -z "$GITHUB_USERNAME" ]; then
+        missing_vars+=("GITHUB_USERNAME")
     fi
     
     if [ -z "$REPO_NAME" ]; then
@@ -53,7 +53,7 @@ validate_environment() {
             print_error "  - $var"
         done
         print_info "Please create a .env file with the required variables:"
-        print_info "  BITBUCKET_USERNAME=your_bitbucket_username"
+        print_info "  GITHUB_USERNAME=your_github_username"
         print_info "  REPO_NAME=your_repository_name"
         print_info "  JITPACK_API_TOKEN=your_jitpack_token"
         exit 1
@@ -324,20 +324,20 @@ fi
 if [ "$REPO_IS_PRIVATE" = true ]; then
     if [ "$DRY_RUN" = true ]; then
         print_dry_run "Private repository detected - manual build trigger may be required"
-        print_dry_run "Monitor build progress at: https://jitpack.io/#$BITBUCKET_USERNAME/$REPO_NAME/$VERSION_TAG"
+        print_dry_run "Monitor build progress at: https://jitpack.io/#$GITHUB_USERNAME/$REPO_NAME/$VERSION_TAG"
         print_dry_run "Make sure JitPack has access to your private repository"
     else
         print_info "Private repository detected - manual build trigger may be required"
-        print_info "Monitor build progress at: https://jitpack.io/#$BITBUCKET_USERNAME/$REPO_NAME/$VERSION_TAG"
+        print_info "Monitor build progress at: https://jitpack.io/#$GITHUB_USERNAME/$REPO_NAME/$VERSION_TAG"
         print_warning "Ensure JitPack has access to your private repository at: https://jitpack.io"
     fi
 else
     if [ "$DRY_RUN" = true ]; then
         print_dry_run "JitPack will automatically detect the new tag and start building"
-        print_dry_run "Monitor build progress at: https://jitpack.io/#$BITBUCKET_USERNAME/$REPO_NAME/$VERSION_TAG"
+        print_dry_run "Monitor build progress at: https://jitpack.io/#$GITHUB_USERNAME/$REPO_NAME/$VERSION_TAG"
     else
         print_info "JitPack will automatically detect the new tag and start building"
-        print_info "Monitor build progress at: https://jitpack.io/#$BITBUCKET_USERNAME/$REPO_NAME/$VERSION_TAG"
+        print_info "Monitor build progress at: https://jitpack.io/#$GITHUB_USERNAME/$REPO_NAME/$VERSION_TAG"
     fi
 fi
 
@@ -372,7 +372,7 @@ if [ "$JITPACK_TRIGGER_BUILD" = true ]; then
             response=$(curl -s -w "%{http_code}" -X POST "https://jitpack.io/api/builds" \
                 -H "Authorization: Bearer $JITPACK_API_TOKEN" \
                 -H "Content-Type: application/json" \
-                -d "{\"repo\":\"$BITBUCKET_USERNAME/$REPO_NAME\"}")
+                -d "{\"repo\":\"$GITHUB_USERNAME/$REPO_NAME\"}")
             
             http_code="${response: -3}"
             body="${response%???}"
@@ -386,7 +386,7 @@ if [ "$JITPACK_TRIGGER_BUILD" = true ]; then
                     print_info "Please check:"
                     print_info "  1. JitPack has access to your private repository"
                     print_info "  2. Your JitPack API token is valid"
-                    print_info "  3. Repository name is correct: $BITBUCKET_USERNAME/$REPO_NAME"
+                    print_info "  3. Repository name is correct: $GITHUB_USERNAME/$REPO_NAME"
                     exit 1
                 else
                     print_info "Build will still be triggered automatically by JitPack"
@@ -416,12 +416,12 @@ echo "    maven { url 'https://jitpack.io' }"
 echo "}"
 echo
 echo "dependencies {"
-echo "    implementation 'org.bitbucket.nimbbl-tech:$REPO_NAME:$VERSION_TAG'"
+echo "    implementation 'com.github.nimbbl-tech:$REPO_NAME:$VERSION_TAG'"
 echo "}"
 echo "----------------------------------------"
 echo
 print_info "SDK Version: $tag_version"
-print_info "JitPack URL: https://jitpack.io/#$BITBUCKET_USERNAME/$REPO_NAME/$VERSION_TAG"
+print_info "JitPack URL: https://jitpack.io/#$GITHUB_USERNAME/$REPO_NAME/$VERSION_TAG"
 
 if [ "$SNAPSHOT_MODE" = true ]; then
     echo

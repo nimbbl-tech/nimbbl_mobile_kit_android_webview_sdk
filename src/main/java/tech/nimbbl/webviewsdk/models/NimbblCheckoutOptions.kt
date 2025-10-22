@@ -85,6 +85,7 @@ class NimbblCheckoutOptions : Parcelable {
     var upiAppCode: String? = null
         private set
 
+
     /**
      * Class used to build the immutable [NimbblCheckoutOptions] object.
      */
@@ -205,6 +206,7 @@ class NimbblCheckoutOptions : Parcelable {
             upiAppCode = uACode
             return this
         }
+
 
 
         fun setOrderToken(tkn: String?): Builder {

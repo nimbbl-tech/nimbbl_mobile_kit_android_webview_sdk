@@ -85,7 +85,9 @@ class UPIManager(private val context: Context) {
             
             // Launch intent
             activity.startActivity(intent)
-            Log.d(TAG, "UPI intent launched successfully")
+            if (is_debug_enabled) {
+                Log.d(TAG, "UPI intent launched successfully")
+            }
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error launching UPI intent: ${e.message}", e)
@@ -103,7 +105,9 @@ class UPIManager(private val context: Context) {
             context.packageManager.getPackageInfo(packageName, 0)
             true
         } catch (e: Exception) {
-            Log.d(TAG, "UPI app not installed: $packageName")
+            if (is_debug_enabled) {
+                Log.d(TAG, "UPI app not installed: $packageName")
+            }
             false
         }
     }
