@@ -330,8 +330,8 @@ class NimbblCheckoutSDK private constructor() {
             }
 
             apiUrl.contains("qa4api.nimbbl.tech") -> {
-                //webViewUrl = "http://192.168.1.55:4200/?token=%1\$s"
-                //webViewRespUrl = "http://192.168.1.55:4200/mobile/redirect"
+               // webViewUrl = "http://192.168.1.19:4200/?token=%1\$s"
+               // webViewRespUrl = "http://192.168.1.19:4200/mobile/redirect"
                 webViewUrl = "https://qa4sonic.nimbbl.tech/?token=%1\$s"
                 webViewRespUrl = "https://qa4sonic.nimbbl.tech/mobile/redirect"
             }
