@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.webkit.JavascriptInterface
@@ -97,6 +98,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         // Initialize manager classes
         initializeManagers()
 
+        // Disable Android gesture back navigation (swipe from edge) after view is ready
+        disableGestureBackNavigation()
+
         if (intent.hasExtra(PaymentConstants.EXTRA_TAG_OPTIONS)) {
             options = intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)!!
             if (!isNetConnected(this)) {
@@ -139,6 +143,27 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     fun Context.isUsingLightTheme(): Boolean {
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         return nightMode != Configuration.UI_MODE_NIGHT_YES
+    }
+
+    /**
+     * Disable Android gesture back navigation (swipe from edge)
+     * This method is called after the view is properly initialized
+     */
+    private fun disableGestureBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                window.setSystemGestureExclusionRects(listOf(
+                    android.graphics.Rect(0, 0, 100, resources.displayMetrics.heightPixels)
+                ))
+                if (is_debug_enabled) {
+                    Log.d(TAG, "Android gesture back navigation disabled")
+                }
+            } catch (e: Exception) {
+                if (is_debug_enabled) {
+                    Log.w(TAG, "Failed to disable gesture back navigation: ${e.message}")
+                }
+            }
+        }
     }
 
     /**
@@ -553,6 +578,10 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         )
     }
 
+
+    override fun onResume() {
+        super.onResume()
+    }
 
     override fun getOnBackInvokedDispatcher(): OnBackInvokedDispatcher {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

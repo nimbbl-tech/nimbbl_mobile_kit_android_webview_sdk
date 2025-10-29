@@ -44,6 +44,7 @@ import java.lang.ref.WeakReference
 class NimbblCheckoutSDK private constructor() {
     private var myActivityReference: WeakReference<Activity?>? = null
     private var receiver: PaymentEventBroadCastReceiver? = null
+    @Volatile
     private var isReceiverRegistered = false
     private var listener: NimbblCheckoutPaymentListener? = null
     private var mContext: Context? = null
@@ -181,21 +182,32 @@ class NimbblCheckoutSDK private constructor() {
             // Use ContextCompat to handle flags automatically for all API levels
             try {
                 // Check if receiver is already registered to prevent double registration
-                if (mContext != null && !isReceiverRegistered()) {
-                    ContextCompat.registerReceiver(
-                        mContext!!, receiver, IntentFilter(BROADCAST_PAYMENT_RESULT),
-                        ContextCompat.RECEIVER_EXPORTED
-                    )
-                    isReceiverRegistered = true
-                    if (is_debug_enabled) {
-                        Log.d("NimbblCheckoutSDK", "Broadcast receivers registered successfully")
+                // Synchronize to prevent race conditions
+                synchronized(this) {
+                    when {
+                        mContext != null && !isReceiverRegistered -> {
+                            ContextCompat.registerReceiver(
+                                mContext!!, receiver, IntentFilter(BROADCAST_PAYMENT_RESULT),
+                                ContextCompat.RECEIVER_EXPORTED
+                            )
+                            isReceiverRegistered = true
+                            if (is_debug_enabled) {
+                                Log.d("NimbblCheckoutSDK", "Broadcast receivers registered successfully")
+                            } else {
+                                // Explicit else for Kotlin compiler
+                            }
+                        }
+                        isReceiverRegistered -> {
+                            if (is_debug_enabled) {
+                                Log.d("NimbblCheckoutSDK", "Broadcast receivers already registered")
+                            } else {
+                                // Explicit else for Kotlin compiler
+                            }
+                        }
+                        else -> {
+                            Log.e("NimbblCheckoutSDK", "Context is null, cannot register receivers")
+                        }
                     }
-                } else if (isReceiverRegistered()) {
-                    if (is_debug_enabled) {
-                        Log.d("NimbblCheckoutSDK", "Broadcast receivers already registered")
-                    }
-                } else {
-                    Log.e("NimbblCheckoutSDK", "Context is null, cannot register receivers")
                 }
             } catch (e: Exception) {
                 Log.e("NimbblCheckoutSDK", "Error registering broadcast receivers: ${e.message}", e)
@@ -330,8 +342,8 @@ class NimbblCheckoutSDK private constructor() {
             }
 
             apiUrl.contains("qa4api.nimbbl.tech") -> {
-                //webViewUrl = "http://192.168.1.55:4200/?token=%1\$s"
-                //webViewRespUrl = "http://192.168.1.55:4200/mobile/redirect"
+               // webViewUrl = "http://192.168.1.19:4200/?token=%1\$s"
+               // webViewRespUrl = "http://192.168.1.19:4200/mobile/redirect"
                 webViewUrl = "https://qa4sonic.nimbbl.tech/?token=%1\$s"
                 webViewRespUrl = "https://qa4sonic.nimbbl.tech/mobile/redirect"
             }
@@ -771,14 +783,17 @@ class NimbblCheckoutSDK private constructor() {
         try {
             // Store context reference for logging before clearing
             // Unregister broadcast receiver if registered
-            if (receiver != null && mContext != null && isReceiverRegistered) {
-                try {
-                    mContext!!.unregisterReceiver(receiver)
-                    isReceiverRegistered = false
-                    SDKUtils.logDebug("NimbblCheckoutSDK", "Broadcast receiver unregistered successfully")
-                } catch (e: Exception) {
-                    SDKUtils.logError("NimbblCheckoutSDK", "Error unregistering broadcast receiver: ${e.message}", e)
-                    isReceiverRegistered = false
+            // Synchronize to prevent race conditions during cleanup
+            synchronized(this) {
+                if (receiver != null && mContext != null && isReceiverRegistered) {
+                    try {
+                        mContext!!.unregisterReceiver(receiver)
+                        isReceiverRegistered = false
+                        SDKUtils.logDebug("NimbblCheckoutSDK", "Broadcast receiver unregistered successfully")
+                    } catch (e: Exception) {
+                        SDKUtils.logError("NimbblCheckoutSDK", "Error unregistering broadcast receiver: ${e.message}", e)
+                        isReceiverRegistered = false
+                    }
                 }
             }
 

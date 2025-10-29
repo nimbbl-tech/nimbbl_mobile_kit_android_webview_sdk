@@ -25,6 +25,6 @@ dependencyResolutionManagement {
     }
 }
 
-// Include Core API SDK
-//include(":nimbbl_mobile_kit_core_api_sdk")
-//project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")
+// Core API SDK is now used as a published dependency from JitPack
+// include(":nimbbl_mobile_kit_core_api_sdk")
+// project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("/Users/sandeepyadav/StudioProjects/nimbbl_mobile_kit_core_api_sdk")
