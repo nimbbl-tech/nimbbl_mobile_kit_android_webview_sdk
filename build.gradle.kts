@@ -72,8 +72,9 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
-    // Core API SDK dependency - Use local Maven
-    implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    // Core API SDK dependency - Use published version
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.6")
+    //implementation(project(":nimbbl_mobile_kit_core_api_sdk")) // Local development
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.5")
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
     //implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
