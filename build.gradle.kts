@@ -36,7 +36,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true  // Enable SDK obfuscation
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -73,8 +73,8 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
     // Core API SDK dependency - Use local Maven
-    //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.5")
+    implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.5")
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
     //implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
     
