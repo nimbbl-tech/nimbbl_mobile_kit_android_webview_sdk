@@ -122,33 +122,33 @@ class WebViewManager(
             setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
             
             // Optimize for mobile
-            setLoadWithOverviewMode(true)
-            setUseWideViewPort(true)
-            setBuiltInZoomControls(false)
-            setDisplayZoomControls(false)
+            loadWithOverviewMode = true
+            useWideViewPort = true
+            builtInZoomControls = false
+            displayZoomControls = false
             
             // Network optimizations
-            setBlockNetworkImage(false)
-            setBlockNetworkLoads(false)
+            blockNetworkImage = false
+            blockNetworkLoads = false
             
             // Additional performance optimizations
-            setMediaPlaybackRequiresUserGesture(false)
+            mediaPlaybackRequiresUserGesture = false
             setAllowFileAccessFromFileURLs(false)
             setAllowUniversalAccessFromFileURLs(false)
             
             // Memory optimizations
-            setMinimumFontSize(8)
-            setMinimumLogicalFontSize(8)
+            minimumFontSize = 8
+            minimumLogicalFontSize = 8
             
             // Text rendering optimizations
-            setTextZoom(100)
+            textZoom = 100
             
             // Layout optimizations
-            setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING)
+            layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
             
             // Security enhancements
-            setAllowFileAccess(false)
-            setAllowContentAccess(false)
+            allowFileAccess = false
+            allowContentAccess = false
             setAllowFileAccessFromFileURLs(false)
             setAllowUniversalAccessFromFileURLs(false)
             
@@ -159,12 +159,12 @@ class WebViewManager(
             
             // Safe browsing
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                setSafeBrowsingEnabled(true)
+                safeBrowsingEnabled = true
             }
             
             // Additional security settings
             setGeolocationEnabled(false)
-            setDatabaseEnabled(false)
+            databaseEnabled = false
         }
         
         // Enable hardware acceleration on the WebView itself
@@ -202,23 +202,23 @@ class WebViewManager(
                 when (errorCode) {
                     ERROR_HOST_LOOKUP -> {
                         Log.e(TAG, "Network error: Host lookup failed for URL: $requestUrl")
-                        handleNetworkError(orderID, orderToken, subMerchantId, requestUrl)
+                        handleNetworkError()
                     }
                     ERROR_TIMEOUT -> {
                         Log.e(TAG, "Network error: Timeout for URL: $requestUrl")
-                        handleTimeoutError(orderID, orderToken, subMerchantId, requestUrl)
+                        handleTimeoutError()
                     }
                     ERROR_CONNECT -> {
                         Log.e(TAG, "Network error: Connection failed for URL: $requestUrl")
-                        handleConnectionError(orderID, orderToken, subMerchantId, requestUrl)
+                        handleConnectionError()
                     }
                     ERROR_SSL_HANDSHAKE -> {
                         Log.e(TAG, "SSL error: Handshake failed for URL: $requestUrl")
-                        handleSSLError(orderID, orderToken, subMerchantId, requestUrl)
+                        handleSSLError()
                     }
                     else -> {
                         Log.e(TAG, "WebView error: $errorDescription (Code: $errorCode) for URL: $requestUrl")
-                        handleGenericError(orderID, orderToken, subMerchantId, requestUrl, errorCode, errorDescription)
+                        handleGenericError(errorCode, errorDescription)
                     }
                 }
                 
@@ -543,7 +543,7 @@ class WebViewManager(
     /**
      * Handle network errors
      */
-    private fun handleNetworkError(orderID: String, orderToken: String, subMerchantId: String, url: String) {
+    private fun handleNetworkError() {
         // Try to reload the page after a delay
         Handler(Looper.getMainLooper()).postDelayed({
             try {
@@ -562,7 +562,7 @@ class WebViewManager(
     /**
      * Handle timeout errors
      */
-    private fun handleTimeoutError(orderID: String, orderToken: String, subMerchantId: String, url: String) {
+    private fun handleTimeoutError() {
         // Try to reload the page after a delay
         Handler(Looper.getMainLooper()).postDelayed({
             try {
@@ -581,7 +581,7 @@ class WebViewManager(
     /**
      * Handle connection errors
      */
-    private fun handleConnectionError(orderID: String, orderToken: String, subMerchantId: String, url: String) {
+    private fun handleConnectionError() {
         // Show user-friendly error message
         Log.e(TAG, "Connection failed. Please check your internet connection.")
     }
@@ -589,7 +589,7 @@ class WebViewManager(
     /**
      * Handle SSL errors
      */
-    private fun handleSSLError(orderID: String, orderToken: String, subMerchantId: String, url: String) {
+    private fun handleSSLError() {
         // Log SSL error for debugging
         Log.e(TAG, "SSL handshake failed. This might be due to certificate issues.")
     }
@@ -597,7 +597,7 @@ class WebViewManager(
     /**
      * Handle generic errors
      */
-    private fun handleGenericError(orderID: String, orderToken: String, subMerchantId: String, url: String, errorCode: Int, errorDescription: String) {
+    private fun handleGenericError(errorCode: Int, errorDescription: String) {
         // Log generic error for debugging
         Log.e(TAG, "Generic WebView error occurred: $errorDescription (Code: $errorCode)")
     }

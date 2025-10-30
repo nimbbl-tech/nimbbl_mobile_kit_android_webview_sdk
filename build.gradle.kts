@@ -74,7 +74,7 @@ dependencies {
     
     // Core API SDK dependency - Use local Maven
     //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.5")
+    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.7-SNAPSHOT-20251030-125745-347f418")
     //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
     //implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
     
