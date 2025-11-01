@@ -62,12 +62,12 @@ class PaymentHandler(private val context: Context) {
             // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EXCEPTION_THROWN,
-                orderID,
+                eventName = EXCEPTION_THROWN,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf("error" to (e.message ?: "Unknown error")),
-                PaymentConstants.SDK_VERSION
+                additionalData = mapOf("error" to (e.message ?: "Unknown error")),
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
             // Send success broadcast
             context.sendBroadcast(Intent(BROADCAST_PAYMENT_RESULT).apply {
@@ -95,12 +95,12 @@ class PaymentHandler(private val context: Context) {
             // Log payment status failed event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.PAYMENT_STATUS,
-                orderID,
+                eventName = EventConstants.PAYMENT_STATUS,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf("error_reason" to errorStr),
-                PaymentConstants.SDK_VERSION
+                additionalData = mapOf("error_reason" to errorStr),
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
         }
 
@@ -153,12 +153,12 @@ class PaymentHandler(private val context: Context) {
         // Log redirect URL hit event
         EventLoggingUtils.safeLogEvent(
             context,
-            "redirect_url_hit",
-            orderID,
+            eventName = EventConstants.REDIRECT_URL_HIT,
+            orderId = orderID,
             orderToken,
             subMerchantId,
-            mapOf("callback_url" to url),
-            PaymentConstants.SDK_VERSION
+            additionalData = mapOf("callback_url" to url),
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
 
         try {
@@ -175,12 +175,12 @@ class PaymentHandler(private val context: Context) {
                     // Log exception event
                     EventLoggingUtils.safeLogEvent(
                         context,
-                        "exception_thrown",
-                        orderID,
+                        eventName = "exception_thrown",
+                        orderId = orderID,
                         orderToken,
                         subMerchantId,
-                        mapOf("error" to (e.message ?: "Unknown error")),
-                        PaymentConstants.SDK_VERSION
+                        additionalData = mapOf("error" to (e.message ?: "Unknown error")),
+                        sdkVersion = PaymentConstants.SDK_VERSION
                     )
                     return false
                 }
@@ -191,12 +191,12 @@ class PaymentHandler(private val context: Context) {
                 // Log exception event
                 EventLoggingUtils.safeLogEvent(
                     context,
-                    "exception_thrown",
-                    orderID,
+                    eventName = "exception_thrown",
+                    orderId = orderID,
                     orderToken,
                     subMerchantId,
-                    mapOf("error" to ("No response parameter found in callback URL")),
-                    PaymentConstants.SDK_VERSION
+                    additionalData = mapOf("error" to ("No response parameter found in callback URL")),
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
                 return false
             }
@@ -207,12 +207,12 @@ class PaymentHandler(private val context: Context) {
             // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context,
-                "exception_thrown",
-                orderID,
+                eventName = "exception_thrown",
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf("error" to (e.message ?: "Unknown error")),
-                PaymentConstants.SDK_VERSION
+                additionalData = mapOf("error" to (e.message ?: "Unknown error")),
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
             return false
         }

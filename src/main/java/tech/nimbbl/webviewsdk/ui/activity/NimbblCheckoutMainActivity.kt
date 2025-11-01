@@ -17,8 +17,6 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.Toast
-import android.window.OnBackInvokedDispatcher
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -98,6 +96,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         // Initialize manager classes
         initializeManagers()
 
+        // Set up back navigation handler for all Android versions
+        setupBackNavigation()
+
         // Disable Android gesture back navigation (swipe from edge) after view is ready
         disableGestureBackNavigation()
 
@@ -146,8 +147,26 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     }
 
     /**
+     * Set up back navigation handler for all Android versions
+     * Uses OnBackPressedDispatcher which works on all Android API levels
+     */
+    private fun setupBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Handle back button press - inject JS to handle back in WebView
+                insertJSToWebview(true)
+            }
+        })
+        if (is_debug_enabled) {
+            Log.d(TAG, "Back navigation handler set up via OnBackPressedDispatcher")
+        }
+    }
+
+    /**
      * Disable Android gesture back navigation (swipe from edge)
      * This method is called after the view is properly initialized
+     * Note: System gesture exclusion is only available on Android Q (API 29)+
+     * For older devices, back navigation is already handled via OnBackPressedDispatcher in setupBackNavigation()
      */
     private fun disableGestureBackNavigation() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -162,6 +181,12 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 if (is_debug_enabled) {
                     Log.w(TAG, "Failed to disable gesture back navigation: ${e.message}")
                 }
+            }
+        } else {
+            // On older Android versions, gesture navigation isn't a system feature
+            // Back navigation is already handled via OnBackPressedDispatcher in setupBackNavigation()
+            if (is_debug_enabled) {
+                Log.d(TAG, "Gesture exclusion not needed on Android < Q (back handled via OnBackPressedDispatcher)")
             }
         }
     }
@@ -259,16 +284,16 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         try {
             // Log update order payload event
             EventLoggingUtils.safeLogEvent(
-                this,
-                EventConstants.UPDATE_ORDER_PAYLOAD,
+                context = this,
+                eventName = EventConstants.UPDATE_ORDER_PAYLOAD,
                 orderId,
                 token,
                 subMerchantId,
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "callback_mode" to PaymentConstants.CALLBACK_MODE_MOBILE,
                     "platform_type" to PaymentConstants.PLATFORM_TYPE_ANDROID
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
 
             CoroutineScope(Dispatchers.Main).launch {
@@ -369,16 +394,16 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     // Log UPI intent started event
                     EventLoggingUtils.safeLogEvent(
                         mContext,
-                        EventConstants.UPI_INTENT_STARTED,
-                        orderID,
+                        eventName = EventConstants.UPI_INTENT_STARTED,
+                        orderId = orderID,
                         options.orderToken,
                         subMerchantId,
-                        mapOf<String, Any>(
+                        additionalData = mapOf<String, Any>(
                             "package_name" to packageName,
                             "transactionId" to transactionID,
                             "upi_url" to url
                         ),
-                        PaymentConstants.SDK_VERSION
+                        sdkVersion = PaymentConstants.SDK_VERSION
                     )
 
                     val intent = Intent(Intent.ACTION_VIEW)
@@ -401,16 +426,16 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     // Log exception event
                     EventLoggingUtils.safeLogEvent(
                         mContext,
-                        EventConstants.EXCEPTION_THROWN,
-                        orderID,
+                        eventName = EventConstants.EXCEPTION_THROWN,
+                        orderId = orderID,
                         options.orderToken,
                         subMerchantId,
-                        mapOf<String, Any>(
+                        additionalData = mapOf<String, Any>(
                             "error" to (e.message ?: "Unknown error"),
                             "location" to "UPI intent handling",
                             "package_name" to "unknown"
                         ),
-                        PaymentConstants.SDK_VERSION
+                        sdkVersion = PaymentConstants.SDK_VERSION
                     )
 
                     Toast.makeText(
@@ -439,16 +464,16 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 }
                 // Log exception event
                 EventLoggingUtils.safeLogEvent(
-                    this@NimbblCheckoutMainActivity,
-                    EventConstants.EXCEPTION_THROWN,
-                    orderID,
+                    context = this@NimbblCheckoutMainActivity,
+                    eventName = EventConstants.EXCEPTION_THROWN,
+                    orderId = orderID,
                     options.orderToken,
                     subMerchantId,
-                    mapOf<String, Any>(
+                    additionalData = mapOf<String, Any>(
                         "error" to (e.message ?: "Unknown error"),
                         "location" to "back press handling"
                     ),
-                    PaymentConstants.SDK_VERSION
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
             }
         }
@@ -496,13 +521,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
         // Log back button pressed event
         EventLoggingUtils.safeLogEvent(
-            this,
-            EventConstants.BACK_BUTTON_PRESSED,
-            orderID,
+            context = this,
+            eventName = EventConstants.BACK_BUTTON_PRESSED,
+            orderId = orderID,
             options.orderToken,
             subMerchantId,
-            mapOf<String, Any>("current_url" to (currentUrl ?: "unknown")),
-            PaymentConstants.SDK_VERSION
+            additionalData = mapOf<String, Any>("current_url" to (currentUrl ?: "unknown")),
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
 
         val jsString = JSONObject.quote(jsonObject.toString())
@@ -546,17 +571,17 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
             // Log UPI intent closed event
             EventLoggingUtils.safeLogEvent(
-                this,
-                EventConstants.UPI_INTENT_CLOSED,
-                orderID,
+                context = this,
+                eventName = EventConstants.UPI_INTENT_CLOSED,
+                orderId = orderID,
                 options.orderToken,
                 subMerchantId,
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "result_code" to result.resultCode.toString(),
                     "result_data" to (result.data?.toString() ?: "null"),
                     "transactionId" to transactionID
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
             insertJSToWebview(false)
         }
@@ -581,17 +606,6 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-    }
-
-    override fun getOnBackInvokedDispatcher(): OnBackInvokedDispatcher {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            @SuppressLint("MissingInflatedId")
-            override fun handleOnBackPressed() {
-                // Handle back button press
-                insertJSToWebview(true)
-            }
-        })
-        return super.getOnBackInvokedDispatcher()
     }
 
     /**

@@ -70,12 +70,12 @@ class WebViewManager(
         // Log webview launch event
         EventLoggingUtils.safeLogEvent(
             context,
-            EventConstants.WEBVIEW_LAUNCH,
-            orderID,
+            eventName = EventConstants.WEBVIEW_LAUNCH,
+            orderId = orderID,
             orderToken,
             subMerchantId,
-            mapOf("url" to url),
-            PaymentConstants.SDK_VERSION
+            additionalData = mapOf("url" to url),
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
         
         // Configure WebView settings first for better performance
@@ -92,16 +92,16 @@ class WebViewManager(
             // Log webview failed event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.WEBVIEW_FAILED,
-                orderID,
+                eventName = EventConstants.WEBVIEW_FAILED,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "error_code" to "URL_LOAD_ERROR",
                     "error_description" to (e.message ?: "Unknown error"),
                     "url" to url
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
         }
     }
@@ -225,16 +225,16 @@ class WebViewManager(
                 // Log webview failed event
                 EventLoggingUtils.safeLogEvent(
                     context,
-                    EventConstants.WEBVIEW_FAILED,
-                    orderID,
+                    eventName = EventConstants.WEBVIEW_FAILED,
+                    orderId = orderID,
                     orderToken,
                     subMerchantId,
-                    mapOf<String, Any>(
+                    additionalData = mapOf<String, Any>(
                         "error_code" to errorCode.toString(),
                         "error_description" to errorDescription,
                         "url" to requestUrl
                     ),
-                    PaymentConstants.SDK_VERSION
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
             }
             
@@ -270,12 +270,12 @@ class WebViewManager(
                 if (url != null) {
                     EventLoggingUtils.safeLogEvent(
                         context,
-                        EventConstants.REDIRECT_URL_HIT,
-                        orderID,
+                        eventName = EventConstants.REDIRECT_URL_HIT,
+                        orderId = orderID,
                         orderToken,
                         subMerchantId,
-                        mapOf("intercepted_url" to url),
-                        PaymentConstants.SDK_VERSION
+                        additionalData = mapOf("intercepted_url" to url),
+                        sdkVersion = PaymentConstants.SDK_VERSION
                     )
                 }
                 
@@ -292,12 +292,12 @@ class WebViewManager(
                 // Log page loaded event
                 EventLoggingUtils.safeLogEvent(
                     context,
-                    EventConstants.WEBVIEW_LOADED,
-                    orderID,
+                    eventName = EventConstants.WEBVIEW_LOADED,
+                    orderId = orderID,
                     orderToken,
                     subMerchantId,
-                    mapOf("loaded_url" to (url ?: "unknown")),
-                    PaymentConstants.SDK_VERSION
+                    additionalData = mapOf("loaded_url" to (url ?: "unknown")),
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
                 
                 // Send UPI intents once after page loads
@@ -325,12 +325,12 @@ class WebViewManager(
             }
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.URL_INTERCEPTED,
-                orderID,
+                eventName = EventConstants.URL_INTERCEPTED,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf("intercepted_url" to url),
-                PaymentConstants.SDK_VERSION
+                additionalData = mapOf("intercepted_url" to url),
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
             
             // Create payment handler for callback processing
@@ -353,14 +353,14 @@ class WebViewManager(
         // Log UPI apps listed event
         EventLoggingUtils.safeLogEvent(
             context,
-            "upi_apps_listed",
-            orderID,
+            eventName = EventConstants.UPI_APPS_LISTED,
+            orderId = orderID,
             orderToken,
             subMerchantId = subMerchantId,
-            mapOf<String, Any>(
+            additionalData = mapOf<String, Any>(
                 "apps_list" to upiAppsJSON.toString()
             ),
-            PaymentConstants.SDK_VERSION
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
         
         evaluateJavaScript(
@@ -474,16 +474,16 @@ class WebViewManager(
             // Log webview failed event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.WEBVIEW_FAILED,
-                orderID,
+                eventName = EventConstants.WEBVIEW_FAILED,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "error_code" to "URL_LOAD_ERROR",
                     "error_description" to (e.message ?: "Unknown error"),
                     "url" to url
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
         }
     }

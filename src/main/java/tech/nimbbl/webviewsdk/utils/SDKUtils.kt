@@ -177,9 +177,9 @@ object SDKUtils {
                     token,
                     subMerchantId,
                     additionalData,
-                    null, // customUserAgent
-                    null, // customDeviceInfo
-                    mapOf("appVersion" to PaymentConstants.SDK_VERSION)
+                    customUserAgent = null, // customUserAgent
+                    customDeviceInfo = null, // customDeviceInfo
+                    customAppInfo = mapOf("appVersion" to PaymentConstants.SDK_VERSION)
                 )
             }
         } catch (e: Exception) {

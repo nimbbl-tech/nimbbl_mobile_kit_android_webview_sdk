@@ -158,17 +158,17 @@ object PaymentURLBuilder {
             // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context, // context not available in this utility class
-                "exception_thrown",
-                orderID, // orderId not available
+                eventName = "exception_thrown",
+                orderId = orderID, // orderId not available
                 orderToken, // token not available
                 subMerchantId, // subMerchantId not available
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "error" to (e.message ?: "Unknown error"),
                     "location" to "PaymentURLBuilder.buildBrowserBackURL",
                     "base_url" to baseUrl,
                     "current_url" to currentUrl
                 ),
-                SDK_VERSION
+                sdkVersion = SDK_VERSION
             )
             // Return original base URL as fallback
             baseUrl

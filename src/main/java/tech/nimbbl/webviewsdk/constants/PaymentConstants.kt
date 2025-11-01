@@ -5,6 +5,7 @@ Created by Sandeep Yadav on 23/02/22.
 Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
+import android.util.Log
 import tech.nimbbl.webviewsdk.BuildConfig
 
 /**
@@ -15,7 +16,8 @@ object PaymentConstants {
     // Debug flag - automatically false in release builds
     val is_debug_enabled = BuildConfig.DEBUG
 
-    val SDK_VERSION = BuildConfig.SDK_VERSION // Reference to centralized version from build.gradle.kts
+    const val SDK_VERSION: String = BuildConfig.SDK_VERSION
+
     
     // SDK Initialization Errors
     const val ERROR_CODE_INIT_FAILED = "INIT_001"

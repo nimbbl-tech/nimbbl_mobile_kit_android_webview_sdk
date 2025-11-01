@@ -461,7 +461,10 @@ class NimbblCheckoutSDK private constructor() {
                         "location" to "init_method",
                         "error_message" to "Device fingerprint is null or empty",
                         "stack_trace" to SDKUtils.getStackTrace()
-                    )
+                    ),
+                    null, // customUserAgent
+                    null, // customDeviceInfo
+                    mapOf("appVersion" to PaymentConstants.SDK_VERSION), // customAppInfo
                 )
             } catch (e: Exception) {
                 if (is_debug_enabled) {

@@ -187,16 +187,16 @@ class UPIManager(private val context: Context) {
             // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.EXCEPTION_THROWN,
+                eventName = EventConstants.EXCEPTION_THROWN,
                 orderId,
                 token,
                 subMerchantId,
-                mapOf<String, Any>(
+                additionalData = mapOf<String, Any>(
                     "error" to (e.message ?: "Unknown error"),
                     "location" to "UPI parameter validation",
                     "parameters" to parameters
                 ),
-                SDK_VERSION
+                sdkVersion = SDK_VERSION
             )
             false
         }
