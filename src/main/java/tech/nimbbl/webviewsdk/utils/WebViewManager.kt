@@ -385,6 +385,16 @@ class WebViewManager(
                 resultMsg: Message?
             ): Boolean {
                 val newWebView = WebView(view?.context ?: context)
+                // Configure new WebView settings to ensure popup payment experience work
+                newWebView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    setSupportMultipleWindows(true)
+                    javaScriptCanOpenWindowsAutomatically = true
+                    // Allow redirects
+                    loadWithOverviewMode = true
+                    useWideViewPort = true
+                }
                 val transport = resultMsg?.obj as? WebViewTransport
                 if (transport != null) {
                     transport.webView = newWebView

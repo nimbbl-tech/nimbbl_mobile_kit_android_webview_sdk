@@ -337,8 +337,10 @@ class NimbblCheckoutSDK private constructor() {
             }
 
             apiUrl.contains("qa2api.nimbbl.tech") -> {
+                 //webViewUrl = "http://192.168.1.17:4200/?token=%1\$s"
+                 //webViewRespUrl = "http://192.168.1.17:4200/mobile/redirect"
                 webViewUrl = "https://qa2sonic.nimbbl.tech/?token=%1\$s"
-                webViewRespUrl = "https://qa2sonic.nimbbl.tech/mobile/redirect"
+               webViewRespUrl = "https://qa2sonic.nimbbl.tech/mobile/redirect"
             }
 
             apiUrl.contains("qa4api.nimbbl.tech") -> {
@@ -347,6 +349,10 @@ class NimbblCheckoutSDK private constructor() {
                 webViewUrl = "https://qa4sonic.nimbbl.tech/?token=%1\$s"
                 webViewRespUrl = "https://qa4sonic.nimbbl.tech/mobile/redirect"
             }
+            /*apiUrl.contains("qa3api.nimbbl.tech") -> {
+                 webViewUrl = "http://192.168.0.30:4200/?token=%1\$s"
+                 webViewRespUrl = "http://192.168.0.30:4200/mobile/redirect"
+            }*/
 
             apiUrl.contains("qa") && apiUrl.contains("nimbbl.tech") -> {
                 // Handle any other QA environment dynamically (matching iOS)
@@ -375,8 +381,12 @@ class NimbblCheckoutSDK private constructor() {
 
             apiUrl.contains("api.nimbbl.tech") && !apiUrl.contains("qa") && !apiUrl.contains("pp") -> {
                 // Production (matching iOS)
+               // webViewUrl = "https://sonic-preview.nimbbl.tech/?token=%1\$s"
+               // webViewRespUrl = "https://sonic-preview.nimbbl.tech/mobile/redirect"
                 webViewUrl = "https://sonic.nimbbl.tech/?token=%1\$s"
-                webViewRespUrl = "https://sonic.nimbbl.tech/mobile/redirect"
+               webViewRespUrl = "https://sonic.nimbbl.tech/mobile/redirect"
+                //  webViewUrl = "http://192.168.0.30:4200/?token=%1\$s"
+                // webViewRespUrl = "http://192.168.0.30:4200/mobile/redirect"
             }
 
             else -> {
@@ -387,8 +397,10 @@ class NimbblCheckoutSDK private constructor() {
                         "Unknown environment URL: $apiUrl, using production as fallback"
                     )
                 }
+               // webViewUrl = "https://sonic-preview.nimbbl.tech/?token=%1\$s"
+               // webViewRespUrl = "https://sonic-preview.nimbbl.tech/mobile/redirect"
                 webViewUrl = "https://sonic.nimbbl.tech/?token=%1\$s"
-                webViewRespUrl = "https://sonic.nimbbl.tech/mobile/redirect"
+               webViewRespUrl = "https://sonic.nimbbl.tech/mobile/redirect"
             }
         }
 
@@ -420,6 +432,8 @@ class NimbblCheckoutSDK private constructor() {
         return matchResult?.groupValues?.get(1)
     }
 
+    // Added @JvmOverloads so Java callers can use init(activity) without passing appCode
+    @JvmOverloads
     fun init(activity: Activity?, appCode: String? = null) {
         if (activity == null) {
             if (is_debug_enabled) {
