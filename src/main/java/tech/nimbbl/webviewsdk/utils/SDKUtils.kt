@@ -8,7 +8,9 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 import android.content.Context
 import android.util.Log
 import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
+import tech.nimbbl.webviewsdk.BuildConfig
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.APP_VERSION_KEY
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_API_URL_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_LISTENER_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_OPTIONS_NULL
@@ -18,7 +20,27 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_SUB
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_TOKEN_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_INIT_FAILED
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_UNKNOWN_ERROR
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_API_URL_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_LISTENER_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_REFERENCE_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_TOKEN_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_GENERIC
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_CONSUMER_MESSAGE
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_ERROR_CODE
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_API_URL_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_LISTENER_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_OPTIONS_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_ORDER_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_REFERENCE_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_TOKEN_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_INIT_FAILED
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.NIMBBL_ERROR_CODE_UNKNOWN_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_SDK_UTILS
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -28,13 +50,13 @@ import java.io.StringWriter
 object SDKUtils {
 
     /**
-     * Log error with consistent formatting
+     * Log error message with consistent formatting
      * @param tag Log tag
      * @param message Error message
      * @param throwable Optional throwable
      */
     fun logError(tag: String, message: String, throwable: Throwable? = null) {
-        if (is_debug_enabled) {
+        if (BuildConfig.DEBUG) {
             if (throwable != null) {
                 Log.e(tag, message, throwable)
             } else {
@@ -44,24 +66,24 @@ object SDKUtils {
     }
 
     /**
-     * Log warning with consistent formatting
-     * @param tag Log tag
-     * @param message Warning message
-     */
-    fun logWarning(tag: String, message: String) {
-        if (is_debug_enabled) {
-            Log.w(tag, message)
-        }
-    }
-
-    /**
      * Log debug message with consistent formatting
      * @param tag Log tag
      * @param message Debug message
      */
     fun logDebug(tag: String, message: String) {
-        if (is_debug_enabled) {
+        if (BuildConfig.DEBUG) {
             Log.d(tag, message)
+        }
+    }
+
+    /**
+     * Log warning message with consistent formatting
+     * @param tag Log tag
+     * @param message Warning message
+     */
+    fun logWarning(tag: String, message: String) {
+        if (BuildConfig.DEBUG) {
+            Log.w(tag, message)
         }
     }
 
@@ -74,63 +96,63 @@ object SDKUtils {
         return when (errorType) {
             ERROR_CODE_INIT_FAILED -> createErrorMap(
                 PaymentConstants.ERROR_MESSAGE_INIT_FAILED,
-                PaymentConstants.NIMBBL_ERROR_CODE_INIT_FAILED,
-                PaymentConstants.CUSTOMER_MESSAGE_INIT_FAILED
+                NIMBBL_ERROR_CODE_INIT_FAILED,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_REFERENCE_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_REFERENCE_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_REFERENCE_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_REFERENCE_NULL
+                ERROR_MESSAGE_CHECKOUT_REFERENCE_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_REFERENCE_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_LISTENER_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_LISTENER_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_LISTENER_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_LISTENER_NULL
+                ERROR_MESSAGE_CHECKOUT_LISTENER_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_LISTENER_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_OPTIONS_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_OPTIONS_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_OPTIONS_NULL
+                ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_OPTIONS_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_TOKEN_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_TOKEN_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_TOKEN_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_TOKEN_NULL
+                ERROR_MESSAGE_CHECKOUT_TOKEN_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_TOKEN_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_ORDER_ID_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_ORDER_ID_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_ORDER_ID_NULL
+                ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_ORDER_ID_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL_MERCHANT,
-                PaymentConstants.NIMBBL_ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL
-            )
-
-            ERROR_CODE_API_URL_NULL -> createErrorMap(
-                PaymentConstants.ERROR_MESSAGE_API_URL_NULL,
-                PaymentConstants.NIMBBL_ERROR_CODE_API_URL_NULL,
-                PaymentConstants.CUSTOMER_MESSAGE_API_URL_NULL
+                ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL,
+                NIMBBL_ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             ERROR_CODE_UNKNOWN_ERROR -> createErrorMap(
                 PaymentConstants.ERROR_MESSAGE_UNKNOWN_ERROR,
-                PaymentConstants.NIMBBL_ERROR_CODE_UNKNOWN_ERROR,
-                PaymentConstants.CUSTOMER_MESSAGE_UNKNOWN_ERROR
+                NIMBBL_ERROR_CODE_UNKNOWN_ERROR,
+                ERROR_MESSAGE_GENERIC
+            )
+
+            ERROR_CODE_API_URL_NULL -> createErrorMap(
+                ERROR_MESSAGE_API_URL_NULL,
+                NIMBBL_ERROR_CODE_API_URL_NULL,
+                ERROR_MESSAGE_GENERIC
             )
 
             else -> {
                 createErrorMap(
                     PaymentConstants.ERROR_MESSAGE_UNKNOWN_ERROR,
-                    PaymentConstants.NIMBBL_ERROR_CODE_UNKNOWN_ERROR,
-                    PaymentConstants.CUSTOMER_MESSAGE_UNKNOWN_ERROR
+                    NIMBBL_ERROR_CODE_UNKNOWN_ERROR,
+                    ERROR_MESSAGE_GENERIC
                 )
             }
         }
@@ -145,9 +167,9 @@ object SDKUtils {
         customerMessage: String
     ): MutableMap<String, Any> {
         return mutableMapOf(
-            "nimbbl_merchant_message" to merchantMessage,
-            "nimbbl_error_code" to errorCode,
-            "nimbbl_consumer_message" to customerMessage
+            JSON_KEY_NIMBBL_MERCHANT_MESSAGE to merchantMessage,
+            JSON_KEY_NIMBBL_ERROR_CODE to errorCode,
+            JSON_KEY_NIMBBL_CONSUMER_MESSAGE to customerMessage
         )
     }
 
@@ -179,11 +201,11 @@ object SDKUtils {
                     additionalData,
                     customUserAgent = null, // customUserAgent
                     customDeviceInfo = null, // customDeviceInfo
-                    customAppInfo = mapOf("appVersion" to PaymentConstants.SDK_VERSION)
+                    customAppInfo = mapOf(APP_VERSION_KEY to PaymentConstants.SDK_VERSION)
                 )
             }
         } catch (e: Exception) {
-            logError("SDKUtils", "Event logging failed for $eventName: ${e.message}", e)
+            logError(TAG_SDK_UTILS, "Event logging failed for $eventName: ${e.message}", e)
         }
     }
 

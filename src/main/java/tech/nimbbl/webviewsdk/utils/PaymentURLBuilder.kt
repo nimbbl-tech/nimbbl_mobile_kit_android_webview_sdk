@@ -6,10 +6,23 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
 import android.content.Context
-import android.util.Log
+import android.net.Uri
+import androidx.core.net.toUri
+import tech.nimbbl.coreapisdk.core.constants.EventConstants.EXCEPTION_THROWN
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.BANK_CODE_PARAM
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROWSER_BACK_PARAM
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_BASE_URL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_CURRENT_URL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_LOCATION
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.LOCATION_PAYMENT_URL_BUILDER_BROWSER_BACK
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.PAYMENT_FLOW_PARAM
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.PAYMENT_MODE_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_PAYMENT_URL_BUILDER
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UNKNOWN_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.WALLET_CODE_PARAM
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 
 /**
@@ -26,45 +39,45 @@ object PaymentURLBuilder {
     fun buildPaymentURL(baseUrl: String, options: NimbblCheckoutOptions): String {
         // Validate base URL
         if (baseUrl.isNullOrEmpty()) {
-            Log.e("PaymentURLBuilder", "Base URL is null or empty")
+            SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Base URL is null or empty")
             throw IllegalArgumentException("Base URL cannot be null or empty")
         }
         
         // Validate URL format
         if (!isValidUrl(baseUrl)) {
-            Log.e("PaymentURLBuilder", "Invalid base URL format: $baseUrl")
+            SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Invalid base URL format: $baseUrl")
             throw IllegalArgumentException("Invalid URL format: $baseUrl")
         }
         
         var url = baseUrl
-        
+
         // Add payment mode if specified
         val paymentModeCode = options.paymentModeCode
         if (!paymentModeCode.isNullOrEmpty()) {
-            url = appendParameter(url, "payment_mode", paymentModeCode)
+            url = appendParameter(url, PAYMENT_MODE_PARAM, paymentModeCode)
         }
-        
+
         // Add bank code if specified
         val bankCode = options.bankCode
         if (!bankCode.isNullOrEmpty()) {
-            url = appendParameter(url, "bank_code", bankCode)
+            url = appendParameter(url, BANK_CODE_PARAM, bankCode)
         }
-        
+
         // Add wallet code if specified
         val walletCode = options.walletCode
         if (!walletCode.isNullOrEmpty()) {
-            url = appendParameter(url, "wallet_code", walletCode)
+            url = appendParameter(url, WALLET_CODE_PARAM, walletCode)
         }
-        
+
         // Add payment flow if specified
         val paymentFlow = options.paymentFlow
         if (!paymentFlow.isNullOrEmpty()) {
-            url = appendParameter(url, "payment_flow", paymentFlow)
+            url = appendParameter(url, PAYMENT_FLOW_PARAM, paymentFlow)
         }
-        
+
         // Validate final URL
         if (!isValidUrl(url)) {
-            Log.e("PaymentURLBuilder", "Generated URL is invalid: $url")
+            SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Generated URL is invalid: $url")
             throw IllegalArgumentException("Generated URL is invalid: $url")
         }
         
@@ -81,7 +94,7 @@ object PaymentURLBuilder {
             val uri = android.net.Uri.parse(url)
             uri.scheme != null && uri.host != null
         } catch (e: Exception) {
-            Log.w("PaymentURLBuilder", "URL validation failed for: $url", e)
+            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "URL validation failed for: $url")
             false
         }
     }
@@ -96,23 +109,25 @@ object PaymentURLBuilder {
     private fun appendParameter(url: String, key: String, value: String): String {
         // Validate inputs
         if (key.isNullOrEmpty()) {
-            Log.w("PaymentURLBuilder", "Parameter key is null or empty")
+            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter key is null or empty")
             return url
         }
         
         if (value.isNullOrEmpty()) {
-            Log.w("PaymentURLBuilder", "Parameter value is null or empty for key: $key")
+            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter value is null or empty for key: $key")
             return url
         }
         
         return try {
+            val encodedKey = Uri.encode(key)
+            val encodedValue = Uri.encode(value)
             if (url.contains("?")) {
-                "$url&$key=$value"
+                "$url&$encodedKey=$encodedValue"
             } else {
-                "$url?$key=$value"
+                "$url?$encodedKey=$encodedValue"
             }
         } catch (e: Exception) {
-            Log.e("PaymentURLBuilder", "Error appending parameter: ${e.message}", e)
+            SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Error appending parameter: ${e.message}", e)
             url // Return original URL as fallback
         }
     }
@@ -136,37 +151,35 @@ object PaymentURLBuilder {
         subMerchantId: String
     ): String {
         return try {
-            val uri = android.net.Uri.parse(currentUrl)
-            val baseUri = android.net.Uri.parse(baseUrl)
+            val uri = currentUrl.toUri()
+            val baseUri = baseUrl.toUri()
             
             return baseUri.buildUpon().apply {
                 uri.queryParameterNames.forEach { param ->
                     appendQueryParameter(
                         param, 
-                        if (param == "browserBack") "true" 
+                        if (param == BROWSER_BACK_PARAM) "true"
                         else uri.getQueryParameter(param)
                     )
                 }
-                if (!uri.queryParameterNames.contains("browserBack")) {
-                    appendQueryParameter("browserBack", "true")
+                if (!uri.queryParameterNames.contains(BROWSER_BACK_PARAM)) {
+                    appendQueryParameter(BROWSER_BACK_PARAM, "true")
                 }
             }.build().toString()
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e("PaymentURLBuilder", "Error building browser back URL: ${e.message}", e)
-            }
+            SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Error building browser back URL: ${e.message}", e)
             // Log exception event
             EventLoggingUtils.safeLogEvent(
-                context, // context not available in this utility class
-                eventName = "exception_thrown",
-                orderId = orderID, // orderId not available
-                orderToken, // token not available
-                subMerchantId, // subMerchantId not available
+                context,
+                eventName = EXCEPTION_THROWN,
+                orderId = orderID,
+                orderToken,
+                subMerchantId,
                 additionalData = mapOf<String, Any>(
-                    "error" to (e.message ?: "Unknown error"),
-                    "location" to "PaymentURLBuilder.buildBrowserBackURL",
-                    "base_url" to baseUrl,
-                    "current_url" to currentUrl
+                    JSON_KEY_ERROR to (e.message ?: UNKNOWN_ERROR),
+                    JSON_KEY_LOCATION to LOCATION_PAYMENT_URL_BUILDER_BROWSER_BACK,
+                    JSON_KEY_BASE_URL to baseUrl,
+                    JSON_KEY_CURRENT_URL to currentUrl
                 ),
                 sdkVersion = SDK_VERSION
             )

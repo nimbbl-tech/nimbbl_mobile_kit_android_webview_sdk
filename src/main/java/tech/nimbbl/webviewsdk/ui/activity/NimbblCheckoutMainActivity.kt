@@ -13,7 +13,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.Toast
@@ -28,7 +27,9 @@ import androidx.core.view.updatePadding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import tech.nimbbl.coreapisdk.api.RestApiUtils
 import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.core.constants.PayloadKeys
@@ -38,12 +39,11 @@ import tech.nimbbl.coreapisdk.utils.extensions.parseJwtToken
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.R
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 import tech.nimbbl.webviewsdk.core.NimbblCheckoutSDK
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 import tech.nimbbl.webviewsdk.utils.PaymentHandler
 import tech.nimbbl.webviewsdk.utils.PaymentURLBuilder
-import tech.nimbbl.webviewsdk.utils.RestApiUtils
+import tech.nimbbl.webviewsdk.utils.SDKUtils
 import tech.nimbbl.webviewsdk.utils.UPIManager
 import tech.nimbbl.webviewsdk.utils.WebViewManager
 
@@ -103,7 +103,12 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         disableGestureBackNavigation()
 
         if (intent.hasExtra(PaymentConstants.EXTRA_TAG_OPTIONS)) {
-            options = intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)!!
+            options = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS, NimbblCheckoutOptions::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)
+            }!!
             if (!isNetConnected(this)) {
                 hideLoadingState()
                 onFailedPayment(getString(R.string.no_internet),false)
@@ -111,14 +116,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 orderID = parseJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
                 subMerchantId =
                     getMerchantIDFromJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
-                if (is_debug_enabled) {
-                    Log.d(PaymentConstants.DEBUG_ORDER_ID_PREFIX, orderID)
-                }
+                SDKUtils.logDebug(PaymentConstants.DEBUG_ORDER_ID_PREFIX, orderID)
                 updateOrder(options.orderToken!!, orderID)
             }
         } else {
             hideLoadingState()
-            onFailedPayment(getString(R.string.input_sent_invalid),true)
+            // No options in intent: report failure without touching uninitialized options
+            onFailedPayment(getString(R.string.input_sent_invalid), true)
         }
     }
 
@@ -157,9 +161,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 insertJSToWebview(true)
             }
         })
-        if (is_debug_enabled) {
-            Log.d(TAG, "Back navigation handler set up via OnBackPressedDispatcher")
-        }
+        SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Back navigation handler set up via OnBackPressedDispatcher")
     }
 
     /**
@@ -171,23 +173,17 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     private fun disableGestureBackNavigation() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                window.setSystemGestureExclusionRects(listOf(
+                window.systemGestureExclusionRects = listOf(
                     android.graphics.Rect(0, 0, 100, resources.displayMetrics.heightPixels)
-                ))
-                if (is_debug_enabled) {
-                    Log.d(TAG, "Android gesture back navigation disabled")
-                }
+                )
+                SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Android gesture back navigation disabled")
             } catch (e: Exception) {
-                if (is_debug_enabled) {
-                    Log.w(TAG, "Failed to disable gesture back navigation: ${e.message}")
-                }
+                SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Failed to disable gesture back navigation: ${e.message}")
             }
         } else {
             // On older Android versions, gesture navigation isn't a system feature
             // Back navigation is already handled via OnBackPressedDispatcher in setupBackNavigation()
-            if (is_debug_enabled) {
-                Log.d(TAG, "Gesture exclusion not needed on Android < Q (back handled via OnBackPressedDispatcher)")
-            }
+            SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Gesture exclusion not needed on Android < Q (back handled via OnBackPressedDispatcher)")
         }
     }
 
@@ -238,9 +234,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             webView.loadDataWithBaseURL(null, minimalHtml, "text/html", "utf-8", null)
             
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e(TAG, "Error preloading WebView: ${e.message}")
-            }
+            SDKUtils.logError(PaymentConstants.TAG_MAIN_ACTIVITY, "Error preloading WebView: ${e.message}", e)
         }
     }
 
@@ -274,9 +268,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 webView.evaluateJavascript("console.log('WebView warmed up');", null)
             }
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e(TAG, "Error warming up WebView: ${e.message}")
-            }
+            SDKUtils.logError(PaymentConstants.TAG_MAIN_ACTIVITY, "Error warming up WebView: ${e.message}", e)
         }
     }
 
@@ -297,46 +289,43 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             )
 
             CoroutineScope(Dispatchers.Main).launch {
-                val response = NimbblCoreApiSDK.getInstance()
-                    ?.updateOrder(
-                        token,
-                        orderId,
-                        PaymentConstants.CALLBACK_MODE_MOBILE,
-                        PaymentConstants.PLATFORM_TYPE_ANDROID
-                    )
-                if (response != null && response.isSuccessful) {
+                val result = withContext(Dispatchers.IO) {
+                    NimbblCoreApiSDK.getInstance()
+                        ?.updateOrder(
+                            token,
+                            orderId,
+                            PaymentConstants.CALLBACK_MODE_MOBILE,
+                            PaymentConstants.PLATFORM_TYPE_ANDROID
+                        )
+                }
+                if (result != null && result.isSuccessful) {
                     setupWebView()
                 } else {
-                    if (response != null) {
-                        if (response.errorBody() != null) {
-                            try {
-                                val errorBodyString = response.errorBody()?.string()
-                                if (!errorBodyString.isNullOrEmpty()) {
-                                    val jObjError = JSONObject(errorBodyString)
-                                    onFailedPayment(
-                                        jObjError.getJSONObject(PaymentConstants.JSON_KEY_ERROR)
-                                            .getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE),true
-                                    )
-                                } else {
-                                    onFailedPayment(getString(R.string.error_in_update_order),true)
-                                }
-                            } catch (e: Exception) {
-                                onFailedPayment(getString(R.string.error_in_update_order),true)
+                    if (result != null && !result.rawBody.isNullOrEmpty()) {
+                        try {
+                            val jObjError = JSONObject(result.rawBody!!)
+                            if (jObjError.has(PaymentConstants.JSON_KEY_ERROR)) {
+                                val errorObj = jObjError.getJSONObject(PaymentConstants.JSON_KEY_ERROR)
+                                onFailedPayment(
+                                    errorObj.getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE),
+                                    true
+                                )
+                            } else {
+                                onFailedPayment(getString(R.string.error_in_update_order), true)
                             }
-                        } else {
-                            onFailedPayment(getString(R.string.error_in_update_order),true)
+                        } catch (e: Exception) {
+                            onFailedPayment(getString(R.string.error_in_update_order), true)
                         }
                     } else {
-                        onFailedPayment(getString(R.string.error_in_update_order),true)
+                        onFailedPayment(getString(R.string.error_in_update_order), true)
                     }
                 }
             }
         } catch (e: Exception) {
-            onFailedPayment(e.toString(),true)
+            onFailedPayment(e.toString(), true)
         }
         NimbblCheckoutSDK.getInstance().setMyActivityWeakReference(this)
     }
-
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
@@ -361,15 +350,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun openUpiIntent(parameters: String) {
-            if (is_debug_enabled) {
-                Log.d(PaymentConstants.TAG_SAN, "openUpiIntent-->$parameters")
-            }
+            SDKUtils.logDebug(PaymentConstants.TAG_SAN, "openUpiIntent-->$parameters")
 
             runOnUiThread {
                 try {
                     // Check if activity is destroyed before proceeding
                     if (isActivityDestroyed()) {
-                        Log.w(TAG, "Activity is destroyed, ignoring UPI intent")
+                        SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Activity is destroyed, ignoring UPI intent")
                         return@runOnUiThread
                     }
 
@@ -379,9 +366,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                             options.orderToken.toString(), subMerchantId
                         )
                     ) {
-                        if (is_debug_enabled) {
-                            Log.w(TAG, "Invalid UPI parameters received")
-                        }
+                        SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Invalid UPI parameters received")
                         insertJSToWebview(false)
                         return@runOnUiThread
                     }
@@ -414,7 +399,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     if (intent.resolveActivity(packageManager) != null) {
                         resultLauncher.launch(intent)
                     } else {
-                        Log.w(TAG, "No app found to handle UPI intent for package: $packageName")
+                        SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "No app found to handle UPI intent for package: $packageName")
                         Toast.makeText(
                             this@NimbblCheckoutMainActivity,
                             "No UPI app found to handle this request",
@@ -459,9 +444,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     handleUpiIntentBack()
                 }
             } catch (e: Exception) {
-                if (is_debug_enabled) {
-                    Log.e("BackHandler", "Error handling back press: ${e.message}", e)
-                }
+                SDKUtils.logError(PaymentConstants.TAG_BACK_HANDLER, "Error handling back press: ${e.message}", e)
                 // Log exception event
                 EventLoggingUtils.safeLogEvent(
                     context = this@NimbblCheckoutMainActivity,
@@ -482,20 +465,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     private fun handleDeviceBackPressed() {
         val currentUrl = webViewManager.getCurrentUrl()
 
-        if (is_debug_enabled) {
-            Log.d(PaymentConstants.TAG_BACK_HANDLER, "currentUrl: $currentUrl")
-        }
-        if (is_debug_enabled) {
-            Log.d(PaymentConstants.TAG_BACK_HANDLER, "expected url: $paymentUrl")
-        }
+        SDKUtils.logDebug(PaymentConstants.TAG_BACK_HANDLER, "currentUrl: $currentUrl")
+        SDKUtils.logDebug(PaymentConstants.TAG_BACK_HANDLER, "expected url: $paymentUrl")
 
         if (!currentUrl.isNullOrEmpty()) {
             val uri = currentUrl.toUri()
             val baseUrl = "${uri.scheme}://${uri.authority}"
 
-            if (is_debug_enabled) {
-                Log.d(PaymentConstants.DEBUG_BASE_URL_PREFIX, baseUrl)
-            }
+            SDKUtils.logDebug(PaymentConstants.DEBUG_BASE_URL_PREFIX, baseUrl)
 
             val expectedBase =
                 paymentUrl.toUri().buildUpon().path("").encodedQuery(null).fragment(null).build()
@@ -535,12 +512,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     }
 
     private suspend fun handleUpiIntentBack() {
-        val paymentEnquiryResponse = NimbblCoreApiSDK.getInstance()?.getTransactionEnquiry(
-            options.orderToken!!,
-            orderID,
-            orderID,
-            transactionID
-        )
+        val paymentEnquiryResponse = withContext(Dispatchers.IO) {
+            NimbblCoreApiSDK.getInstance()?.getTransactionEnquiry(
+                options.orderToken!!,
+                orderID,
+                orderID,
+                transactionID
+            )
+        }
 
         val jsonObject = JSONObject().apply {
             put(
@@ -548,7 +527,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 PaymentConstants.UPI_INTENT_BACK_RESPONSE_CLOSE
             )
             val status = if (paymentEnquiryResponse?.isSuccessful == true) {
-                paymentEnquiryResponse.body()?.order?.status ?: ""
+                paymentEnquiryResponse.data?.order?.status ?: ""
             } else {
                 ""
             }
@@ -562,12 +541,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     var resultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (is_debug_enabled) {
-                Log.d(
-                    PaymentConstants.TAG_SAN,
-                    "resultCode-->" + result.resultCode + "data-->" + result.data
-                )
-            }
+            SDKUtils.logDebug(PaymentConstants.TAG_SAN, "resultCode-->" + result.resultCode + "data-->" + result.data)
 
             // Log UPI intent closed event
             EventLoggingUtils.safeLogEvent(
@@ -624,14 +598,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         try {
             webViewManager.destroy()
         } catch (e: Exception) {
-            Log.e(TAG, "Error destroying WebView manager: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error destroying WebView manager: ${e.message}", e)
         }
 
         // Clean up SDK resources
         try {
             NimbblCheckoutSDK.getInstance().cleanup()
         } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up SDK: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error cleaning up SDK: ${e.message}", e)
         }
     }
 
@@ -656,11 +630,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 startShimmerAnimation(shimmerView)
             }
             
-            if (is_debug_enabled) {
-                Log.d(TAG, "Shimmer loading state shown")
-            }
+            SDKUtils.logDebug(TAG, "Shimmer loading state shown")
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing loading state: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error showing loading state: ${e.message}", e)
         }
     }
 
@@ -683,11 +655,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 showWebView()
             }
             
-            if (is_debug_enabled) {
-                Log.d(TAG, "Shimmer loading state hidden")
-            }
+            SDKUtils.logDebug(TAG, "Shimmer loading state hidden")
         } catch (e: Exception) {
-            Log.e(TAG, "Error hiding loading state: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error hiding loading state: ${e.message}", e)
             // Fallback: just show WebView
             showWebView()
         }
@@ -705,11 +675,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 .setDuration(300)
                 .start()
                 
-            if (is_debug_enabled) {
-                Log.d(TAG, "WebView shown with animation")
-            }
+            SDKUtils.logDebug(TAG, "WebView shown with animation")
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing WebView: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error showing WebView: ${e.message}", e)
             webView.visibility = android.view.View.VISIBLE
         }
     }
@@ -731,11 +699,9 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 }, delay)
             }
             
-            if (is_debug_enabled) {
-                Log.d(TAG, "Shimmer animation started for ${shimmerViews.size} items")
-            }
+            SDKUtils.logDebug(TAG, "Shimmer animation started for ${shimmerViews.size} items")
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting shimmer animation: ${e.message}", e)
+            SDKUtils.logError(TAG, "Error starting shimmer animation: ${e.message}", e)
         }
     }
 

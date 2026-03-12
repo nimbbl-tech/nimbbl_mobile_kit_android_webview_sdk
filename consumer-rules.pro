@@ -16,16 +16,9 @@
 # ===========================================
 # JWT Token Parsing (Critical)
 # ===========================================
-# JWT Library
+# Auth0 JWT library (used by Core API SDK)
 -keep class com.auth0.android.jwt.** { *; }
 -keep class com.auth0.jwt.** { *; }
-
-# Gson TypeToken for JWT parsing
--keep class com.google.gson.reflect.TypeToken { *; }
--keep class * extends com.google.gson.reflect.TypeToken
--keepclassmembers class * extends com.google.gson.reflect.TypeToken {
-    <init>(...);
-}
 
 # JWT parsing methods
 -keep class tech.nimbbl.coreapisdk.utils.extensions.NimbblSDKExtensions {
@@ -41,15 +34,14 @@
 -keep public class tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions { *; }
 -keep public class tech.nimbbl.webviewsdk.models.interfaces.NimbblCheckoutPaymentListener { *; }
 
-# Keep Core API SDK classes that WebView SDK depends on
+# Keep Core API SDK classes that WebView SDK depends on (ApiResult kept by Core API SDK consumer-rules.pro)
 -keep class tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK { *; }
--keep class tech.nimbbl.coreapisdk.utils.payloads.OrderCreationPayload { *; }
+-keep class tech.nimbbl.coreapisdk.api.RestApiUtils { *; }
 
 # ===========================================
-# JSON Serialization (Essential)
+# Model Classes (Essential)
 # ===========================================
-# Keep model classes for JSON serialization - CRITICAL for Gson
-# Keep classes, constructors, fields, and methods
+# Keep model classes used by org.json
 -keep class tech.nimbbl.webviewsdk.models.** {
     <fields>;
     <init>(...);
@@ -68,11 +60,6 @@
     <methods>;
 }
 
-# Keep JSON annotations
--keepclassmembers class * {
-    @com.google.gson.annotations.SerializedName <fields>;
-}
-
 # ===========================================
 # Essential Attributes
 # ===========================================
@@ -84,8 +71,6 @@
 # ===========================================
 # Suppress Warnings
 # ===========================================
--dontwarn com.google.gson.**
--dontwarn com.google.gson.reflect.**
 -dontwarn kotlin.reflect.**
 -dontwarn kotlin.Unit
 -dontwarn kotlin.jvm.internal.**

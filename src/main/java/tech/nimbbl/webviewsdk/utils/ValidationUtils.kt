@@ -5,17 +5,17 @@ Created by Sandeep Yadav on 23/07/25.
 Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_ORDER_ID_NULL
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.CUSTOMER_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_LISTENER_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_OPTIONS_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_ORDER_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_TOKEN_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_INIT_FAILED
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_LISTENER_NULL_MERCHANT
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL_MERCHANT
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_TOKEN_NULL_MERCHANT
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_LISTENER_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_TOKEN_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_INIT_FAILED
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 
@@ -40,11 +40,11 @@ object ValidationUtils {
     fun validateCheckoutOptions(options: NimbblCheckoutOptions?): ValidationResult {
         return when {
             options == null -> ValidationResult.Error(
-                ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL_MERCHANT,
+                ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL,
                 ERROR_CODE_CHECKOUT_OPTIONS_NULL
             )
             options.orderToken.isNullOrEmpty() -> ValidationResult.Error(
-                ERROR_MESSAGE_CHECKOUT_TOKEN_NULL_MERCHANT,
+                ERROR_MESSAGE_CHECKOUT_TOKEN_NULL,
                 ERROR_CODE_CHECKOUT_TOKEN_NULL
             )
             else -> ValidationResult.Success
@@ -74,7 +74,7 @@ object ValidationUtils {
     fun validateListener(listener: Any?): ValidationResult {
         return when {
             listener == null -> ValidationResult.Error(
-                ERROR_MESSAGE_CHECKOUT_LISTENER_NULL_MERCHANT,
+                ERROR_MESSAGE_CHECKOUT_LISTENER_NULL,
                 ERROR_CODE_CHECKOUT_LISTENER_NULL
             )
             else -> ValidationResult.Success
@@ -90,7 +90,7 @@ object ValidationUtils {
     fun validateOrderId(orderId: String?): ValidationResult {
         return when {
             orderId.isNullOrEmpty() -> ValidationResult.Error(
-                CUSTOMER_MESSAGE_CHECKOUT_ORDER_ID_NULL,
+                ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL,
                 ERROR_CODE_CHECKOUT_ORDER_ID_NULL
             )
             else -> ValidationResult.Success
@@ -105,32 +105,12 @@ object ValidationUtils {
     fun validateSubMerchantId(subMerchantId: String?): ValidationResult {
         return when {
             subMerchantId.isNullOrEmpty() -> ValidationResult.Error(
-                CUSTOMER_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL,
+                ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL,
                 ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL
             )
             else -> ValidationResult.Success
         }
     }
-    
-    /**
-     * Check if string is a valid URL
-     * @param url URL string to check
-     * @return true if valid URL
-     */
-    private fun isValidUrl(url: String): Boolean {
-        return try {
-            val urlPattern = Regex(
-                "^https?://" +  // http:// or https://
-                        "(([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,6})" +  // domain
-                        "(:[0-9]{1,5})?" +  // optional port
-                        "(/.*)?$"  // optional path
-            )
-            urlPattern.matches(url)
-        } catch (e: Exception) {
-            false
-        }
-    }
-
     
     /**
      * Validate all checkout prerequisites
@@ -162,3 +142,5 @@ object ValidationUtils {
         return ValidationResult.Success
     }
 }
+
+

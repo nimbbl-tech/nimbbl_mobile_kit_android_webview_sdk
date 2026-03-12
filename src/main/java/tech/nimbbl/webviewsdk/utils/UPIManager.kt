@@ -5,18 +5,26 @@ Created by Sandeep Yadav on 23/07/25.
 Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.net.Uri
-import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_LOCATION
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_PARAMETERS
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_UPI_APPS
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_UPI_APP_NAME
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.LOCATION_UPI_PARAMETER_VALIDATION
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_SAN
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UNKNOWN_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UPI_PARAM_PACKAGE_NAME
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UPI_PARAM_TRANSACTION_ID
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UPI_PARAM_URL
 
 /**
  * Manager class for handling UPI (Unified Payments Interface) operations
@@ -24,92 +32,8 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
 class UPIManager(private val context: Context) {
     
     companion object {
-        private const val TAG = "UPIManager"
         private const val UPI_SCHEME = "upi"
         private const val UPI_AUTHORITY = "pay"
-    }
-    
-    /**
-     * Create UPI intent with validation
-     * @param url UPI URL
-     * @param packageName Package name of the UPI app
-     * @param transactionId Transaction ID
-     * @return Intent if valid, null otherwise
-     */
-    fun createUPIIntent(url: String, packageName: String, transactionId: String): Intent? {
-        return try {
-            // Validate URL
-            if (url.isNullOrEmpty()) {
-                Log.e(TAG, "UPI URL is null or empty")
-                return null
-            }
-            
-            // Validate package name
-            if (packageName.isNullOrEmpty()) {
-                Log.e(TAG, "Package name is null or empty")
-                return null
-            }
-            
-            // Create intent
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse(url)
-                setPackage(packageName)
-            }
-            
-            // Check if intent can be resolved
-            if (intent.resolveActivity(context.packageManager) != null) {
-                intent
-            } else {
-                Log.w(TAG, "No app found to handle UPI intent for package: $packageName")
-                null
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating UPI intent: ${e.message}", e)
-            null
-        }
-    }
-    
-    /**
-     * Launch UPI intent with proper error handling
-     * @param intent UPI intent to launch
-     * @param activity Activity to launch from
-     * @return true if launched successfully, false otherwise
-     */
-    fun launchUPIIntent(intent: Intent, activity: Activity): Boolean {
-        return try {
-            // Validate intent
-            if (intent.data == null) {
-                Log.e(TAG, "UPI intent has no data URI")
-                return false
-            }
-            
-            // Launch intent
-            activity.startActivity(intent)
-            if (is_debug_enabled) {
-                Log.d(TAG, "UPI intent launched successfully")
-            }
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error launching UPI intent: ${e.message}", e)
-            false
-        }
-    }
-    
-    /**
-     * Check if UPI app is installed
-     * @param packageName Package name to check
-     * @return true if app is installed, false otherwise
-     */
-    private fun isUPIAppInstalled(packageName: String): Boolean {
-        return try {
-            context.packageManager.getPackageInfo(packageName, 0)
-            true
-        } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.d(TAG, "UPI app not installed: $packageName")
-            }
-            false
-        }
     }
 
     /**
@@ -127,44 +51,16 @@ class UPIManager(private val context: Context) {
         
         val pkgAppsList: List<ResolveInfo> = packageManager.queryIntentActivities(mainIntent, 0)
         val jsonArray = JSONArray()
-        
-        // If no UPI apps found, add dummy Google Pay and PhonePe
-        if (pkgAppsList.isEmpty()) {
-            if (is_debug_enabled) {
-                Log.d(TAG, "No UPI apps found in createUPIAppsJSON, adding dummy Google Pay and PhonePe")
-            }
-
-        /*    // Add dummy Google Pay
-            val googlePayObj = JSONObject().apply {
-                put("upi_app_name", "Google Pay")
-                put("package_name", "com.google.android.apps.nbu.paisa.user")
-                    put("appiconbase64", "")
-
-            }
-            jsonArray.put(googlePayObj)
-
-            // Add dummy PhonePe
-            val phonePeObj = JSONObject().apply {
-                put("upi_app_name", "PhonePe")
-                put("package_name", "com.phonepe.app")
-
-                // Use default UPI icon for dummy apps
-                    put("appiconbase64","")
-
-            }
-            jsonArray.put(phonePeObj)*/
-        } else {
             // Process actual UPI apps
             for (resolveInfo in pkgAppsList) {
                 val appObj = JSONObject().apply {
-                    put("upi_app_name", resolveInfo.loadLabel(packageManager).toString())
-                    put("package_name", resolveInfo.activityInfo.packageName)
+                    put(JSON_KEY_UPI_APP_NAME, resolveInfo.loadLabel(packageManager).toString())
+                    put(UPI_PARAM_PACKAGE_NAME, resolveInfo.activityInfo.packageName)
                 }
                 jsonArray.put(appObj)
             }
-        }
-        
-        return JSONObject().put("UPIApps", jsonArray)
+
+        return JSONObject().put(JSON_KEY_UPI_APPS, jsonArray)
     }
     
     /**
@@ -175,15 +71,13 @@ class UPIManager(private val context: Context) {
     fun validateUPIParameters(parameters: String,orderId:String,token:String,subMerchantId: String): Boolean {
         return try {
             val jsonObject = JSONObject(parameters)
-            val requiredFields = listOf("url", "package_name", "transaction_id")
-            
+            val requiredFields = listOf(UPI_PARAM_URL, UPI_PARAM_PACKAGE_NAME, UPI_PARAM_TRANSACTION_ID)
+
             requiredFields.all { field ->
                 jsonObject.has(field) && !jsonObject.getString(field).isNullOrEmpty()
             }
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e(TAG, "Invalid UPI parameters: ${e.message}", e)
-            }
+            SDKUtils.logError(TAG_SAN, "Invalid UPI parameters: ${e.message}", e)
             // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context,
@@ -192,9 +86,9 @@ class UPIManager(private val context: Context) {
                 token,
                 subMerchantId,
                 additionalData = mapOf<String, Any>(
-                    "error" to (e.message ?: "Unknown error"),
-                    "location" to "UPI parameter validation",
-                    "parameters" to parameters
+                    JSON_KEY_ERROR to (e.message ?: UNKNOWN_ERROR),
+                    JSON_KEY_LOCATION to LOCATION_UPI_PARAMETER_VALIDATION,
+                    JSON_KEY_PARAMETERS to parameters
                 ),
                 sdkVersion = SDK_VERSION
             )
