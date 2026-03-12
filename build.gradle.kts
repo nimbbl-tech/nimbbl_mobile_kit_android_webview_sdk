@@ -37,7 +37,7 @@ plugins {
 }
 
 // Dependency versions - aligned with Core API SDK (from version.properties when present)
-val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "4.0.12")
+val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "4.0.13")
 val coreKtxVersion = "1.12.0"
 val appCompatVersion = "1.6.1"
 val materialVersion = "1.12.0"
