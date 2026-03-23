@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
-import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -21,10 +20,13 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebView.WebViewTransport
 import android.webkit.WebViewClient
+import tech.nimbbl.coreapisdk.api.RestApiUtils
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.is_debug_enabled
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_WEBVIEW
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.toString
 
 /**
  * Manager class for handling WebView operations and configuration
@@ -35,8 +37,7 @@ class WebViewManager(
 ) {
     
     companion object {
-        private const val TAG = "WebViewManager"
-        private const val ERROR_SSL_HANDSHAKE = 104
+        private val ERROR_SSL_HANDSHAKE = WebViewClient.ERROR_FAILED_SSL_HANDSHAKE
     }
     
     private var isInitialPageLoaded = false
@@ -44,6 +45,8 @@ class WebViewManager(
     private var isDestroyed = false
     private var onPageFinishedCallback: (() -> Unit)? = null
     private var hasCallbackBeenInvoked = false
+
+    private val callbackHandled = AtomicBoolean(false)
     
     /**
      * Set callback for when page finishes loading
@@ -66,16 +69,17 @@ class WebViewManager(
         isWebViewLoadedEventLogged = false
         // Reset callback invocation flag
         hasCallbackBeenInvoked = false
+        callbackHandled.set(false)
         
         // Log webview launch event
         EventLoggingUtils.safeLogEvent(
             context,
-            EventConstants.WEBVIEW_LAUNCH,
-            orderID,
+            eventName = EventConstants.WEBVIEW_LAUNCH,
+            orderId = orderID,
             orderToken,
             subMerchantId,
-            mapOf("url" to url),
-            PaymentConstants.SDK_VERSION
+            additionalData = mapOf(EventConstants.KEY_URL to url),
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
         
         // Configure WebView settings first for better performance
@@ -86,22 +90,20 @@ class WebViewManager(
         try {
             webView.loadUrl(url)
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e(TAG, "Error loading URL: ${e.message}", e)
-            }
+            SDKUtils.logError(TAG_WEBVIEW, "Error loading URL: ${e.message}", e)
             // Log webview failed event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.WEBVIEW_FAILED,
-                orderID,
+                eventName = EventConstants.WEBVIEW_FAILED,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf<String, Any>(
-                    "error_code" to "URL_LOAD_ERROR",
-                    "error_description" to (e.message ?: "Unknown error"),
-                    "url" to url
+                additionalData = mapOf<String, Any>(
+                    EventConstants.KEY_ERROR_CODE to "URL_LOAD_ERROR",
+                    EventConstants.KEY_ERROR_DESCRIPTION to (e.message ?: "Unknown error"),
+                    EventConstants.KEY_URL to url
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
         }
     }
@@ -198,26 +200,26 @@ class WebViewManager(
                 
                 val requestUrl = request?.url?.toString() ?: "unknown"
                 
-                // Handle specific error types
+                // Handle specific error types (WebViewClient constants)
                 when (errorCode) {
-                    ERROR_HOST_LOOKUP -> {
-                        Log.e(TAG, "Network error: Host lookup failed for URL: $requestUrl")
+                    WebViewClient.ERROR_HOST_LOOKUP -> {
+                        SDKUtils.logError(TAG_WEBVIEW, "Network error: Host lookup failed for URL: $requestUrl")
                         handleNetworkError()
                     }
-                    ERROR_TIMEOUT -> {
-                        Log.e(TAG, "Network error: Timeout for URL: $requestUrl")
+                    WebViewClient.ERROR_TIMEOUT -> {
+                        SDKUtils.logError(TAG_WEBVIEW, "Network error: Timeout for URL: $requestUrl")
                         handleTimeoutError()
                     }
-                    ERROR_CONNECT -> {
-                        Log.e(TAG, "Network error: Connection failed for URL: $requestUrl")
+                    WebViewClient.ERROR_CONNECT -> {
+                        SDKUtils.logError(TAG_WEBVIEW, "Network error: Connection failed for URL: $requestUrl")
                         handleConnectionError()
                     }
                     ERROR_SSL_HANDSHAKE -> {
-                        Log.e(TAG, "SSL error: Handshake failed for URL: $requestUrl")
+                        SDKUtils.logError(TAG_WEBVIEW, "SSL error: Handshake failed for URL: $requestUrl")
                         handleSSLError()
                     }
                     else -> {
-                        Log.e(TAG, "WebView error: $errorDescription (Code: $errorCode) for URL: $requestUrl")
+                        SDKUtils.logError(TAG_WEBVIEW, "WebView error: $errorDescription (Code: $errorCode) for URL: $requestUrl")
                         handleGenericError(errorCode, errorDescription)
                     }
                 }
@@ -225,79 +227,81 @@ class WebViewManager(
                 // Log webview failed event
                 EventLoggingUtils.safeLogEvent(
                     context,
-                    EventConstants.WEBVIEW_FAILED,
-                    orderID,
+                    eventName = EventConstants.WEBVIEW_FAILED,
+                    orderId = orderID,
                     orderToken,
                     subMerchantId,
-                    mapOf<String, Any>(
-                        "error_code" to errorCode.toString(),
-                        "error_description" to errorDescription,
-                        "url" to requestUrl
+                    additionalData = mapOf<String, Any>(
+                        EventConstants.KEY_ERROR_CODE to errorCode.toString(),
+                        EventConstants.KEY_ERROR_DESCRIPTION to errorDescription,
+                        EventConstants.KEY_URL to requestUrl
                     ),
-                    PaymentConstants.SDK_VERSION
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
             }
             
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                if (is_debug_enabled) {
-                    Log.d(TAG, "Page started loading: ${url ?: "empty"}")
-                }
+                SDKUtils.logDebug(TAG_WEBVIEW, "Page started loading: ${url ?: "empty"}")
             }
             
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): android.webkit.WebResourceResponse? {
                 // Optimize resource loading for better performance
-                val url = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    request?.url?.toString()
-                } else {
-                    null
-                }
-                
-                if (is_debug_enabled && url != null) {
-                    Log.d(TAG, "Intercepting request: $url")
+                val url = request?.url?.toString()
+
+                if (url != null) {
+                    SDKUtils.logDebug(TAG_WEBVIEW, "Intercepting request: $url")
                 }
                 
                 return super.shouldInterceptRequest(view, request)
             }
-            
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                val targetUrl = request?.url?.toString()
+                val handled = handleCallbackURL(targetUrl, orderID, orderToken, subMerchantId)
+                if (handled) {
+                    SDKUtils.logDebug(TAG_WEBVIEW, "Callback URL consumed in shouldOverrideUrlLoading: $targetUrl")
+                    return true
+                }
+                return false
+            }
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                 super.doUpdateVisitedHistory(view, url, isReload)
-                if (is_debug_enabled) {
-                    Log.d(TAG, "URL history updated: ${url ?: "empty"} -> isReload: $isReload")
-                }
-                
+                SDKUtils.logDebug(TAG_WEBVIEW, "URL history updated: ${url ?: "empty"} -> isReload: $isReload")
+
                 // Log URL intercepted event
                 if (url != null) {
                     EventLoggingUtils.safeLogEvent(
                         context,
-                        EventConstants.REDIRECT_URL_HIT,
-                        orderID,
+                        eventName = EventConstants.REDIRECT_URL_HIT,
+                        orderId = orderID,
                         orderToken,
                         subMerchantId,
-                        mapOf("intercepted_url" to url),
-                        PaymentConstants.SDK_VERSION
+                        additionalData = mapOf(EventConstants.KEY_INTERCEPTED_URL to url),
+                        sdkVersion = PaymentConstants.SDK_VERSION
                     )
                 }
-                
-                // Handle callback URL if needed
-                handleCallbackURL(url, orderID, orderToken,subMerchantId)
+
+                // Fallback interception path; safe due to atomic guard in handleCallbackURL
+                handleCallbackURL(url, orderID, orderToken, subMerchantId)
             }
             
             override fun onPageFinished(view: WebView?, url: String?) {
-                if (is_debug_enabled) {
-                    Log.d(TAG, "Page finished loading: ${url ?: "empty"}")
-                }
+                SDKUtils.logDebug(TAG_WEBVIEW, "Page finished loading: ${url ?: "empty"}")
                 super.onPageFinished(view, url)
                 
                 // Log page loaded event
                 EventLoggingUtils.safeLogEvent(
                     context,
-                    EventConstants.WEBVIEW_LOADED,
-                    orderID,
+                    eventName = EventConstants.WEBVIEW_LOADED,
+                    orderId = orderID,
                     orderToken,
                     subMerchantId,
-                    mapOf("loaded_url" to (url ?: "unknown")),
-                    PaymentConstants.SDK_VERSION
+                    additionalData = mapOf(EventConstants.KEY_LOADED_URL to (url ?: "unknown")),
+                    sdkVersion = PaymentConstants.SDK_VERSION
                 )
                 
                 // Send UPI intents once after page loads
@@ -318,58 +322,64 @@ class WebViewManager(
     /**
      * Handle callback URL processing
      */
-    private fun handleCallbackURL(url: String?, orderID: String, orderToken: String,subMerchantId: String) {
-        if (url != null && url.startsWith(RestApiUtils.WEB_VIEW_RESP_CHECK_URL)) {
-            if (is_debug_enabled) {
-                Log.d(TAG, "Processing callback URL: $url")
-            }
-            EventLoggingUtils.safeLogEvent(
-                context,
-                EventConstants.URL_INTERCEPTED,
-                orderID,
-                orderToken,
-                subMerchantId,
-                mapOf("intercepted_url" to url),
-                PaymentConstants.SDK_VERSION
-            )
-            
-            // Create payment handler for callback processing
+    private fun handleCallbackURL(url: String?, orderID: String, orderToken: String,subMerchantId: String): Boolean {
+        if (url.isNullOrEmpty()) return false
+        if (!url.startsWith(RestApiUtils.WEB_VIEW_RESP_CHECK_URL)) return false
+
+        // Atomic once-only processing across repeated WebView callbacks.
+        if (!callbackHandled.compareAndSet(false, true)) {
+            SDKUtils.logDebug(TAG_WEBVIEW, "Duplicate callback URL ignored: $url")
+            return true
+        }
+        SDKUtils.logDebug(TAG_WEBVIEW, "Processing callback URL (first hit): $url")
+        EventLoggingUtils.safeLogEvent(
+            context,
+            eventName = EventConstants.URL_INTERCEPTED,
+            orderId = orderID,
+            orderToken,
+            subMerchantId,
+            additionalData = mapOf(EventConstants.KEY_INTERCEPTED_URL to url),
+            sdkVersion = PaymentConstants.SDK_VERSION
+        )
+
+        return try {
             val paymentHandler = PaymentHandler(context)
             paymentHandler.processCallbackURL(url, orderID, orderToken, subMerchantId)
+            true
+        } catch (e: Exception) {
+            SDKUtils.logError(TAG_WEBVIEW, "Error processing callback URL: ${e.message}", e)
+            true
         }
+
     }
     
     /**
      * Send UPI intents to WebView
      */
     private fun sendUpiIntents(orderID: String, orderToken: String, subMerchantId: String) {
-        if (is_debug_enabled) {
-            Log.d(TAG, "Sending UPI intents to WebView")
-        }
-        
+        SDKUtils.logDebug(TAG_WEBVIEW, "Sending UPI intents to WebView")
+
         val upiManager = UPIManager(context)
         val upiAppsJSON = upiManager.createUPIAppsJSON()
 
         // Log UPI apps listed event
         EventLoggingUtils.safeLogEvent(
             context,
-            "upi_apps_listed",
-            orderID,
+            eventName = EventConstants.UPI_APPS_LISTED,
+            orderId = orderID,
             orderToken,
             subMerchantId = subMerchantId,
-            mapOf<String, Any>(
-                "apps_list" to upiAppsJSON.toString()
+            additionalData = mapOf<String, Any>(
+                EventConstants.KEY_APPS_LIST to upiAppsJSON.toString()
             ),
-            PaymentConstants.SDK_VERSION
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
         
         evaluateJavaScript(
             "window.nimbbl_web.UPIIntentAvailable(JSON.stringify(${upiAppsJSON}))"
         )
         
-        if (is_debug_enabled) {
-            Log.d(TAG, "UPI intents sent successfully")
-        }
+        SDKUtils.logDebug(TAG_WEBVIEW, "UPI intents sent successfully")
     }
 
     
@@ -385,12 +395,33 @@ class WebViewManager(
                 resultMsg: Message?
             ): Boolean {
                 val newWebView = WebView(view?.context ?: context)
+                // Configure new WebView settings to ensure popup payment experience work
+                newWebView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH)
+                    cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+
+                    // Additional preload optimizations
+                    loadWithOverviewMode = true
+                    useWideViewPort = true
+                    builtInZoomControls = false
+                    displayZoomControls = false
+
+                    // Memory optimizations
+                    minimumFontSize = 8
+                    minimumLogicalFontSize = 8
+                    textZoom = 100
+
+                    // Layout optimizations
+                    layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                }
                 val transport = resultMsg?.obj as? WebViewTransport
                 if (transport != null) {
                     transport.webView = newWebView
                     resultMsg.sendToTarget()
                 } else {
-                    Log.e(TAG, "WebViewTransport is null")
+                    SDKUtils.logError(TAG_WEBVIEW, "WebViewTransport is null")
                 }
                 
                 val dialog = Dialog(view?.context ?: context).apply {
@@ -418,9 +449,7 @@ class WebViewManager(
                     }
 
                     override fun onPageFinished(view: WebView?, url: String?) {
-                        if (is_debug_enabled) {
-                            Log.d(TAG, "New window page finished: ${url ?: "empty"}")
-                        }
+                        SDKUtils.logDebug(TAG_WEBVIEW, "New window page finished: ${url ?: "empty"}")
                         super.onPageFinished(view, url)
                     }
                 }
@@ -439,13 +468,13 @@ class WebViewManager(
      */
     fun evaluateJavaScript(script: String) {
         if (isDestroyed()) {
-            Log.w(TAG, "WebView is destroyed, cannot evaluate JavaScript")
+            SDKUtils.logWarning(TAG_WEBVIEW, "WebView is destroyed, cannot evaluate JavaScript")
             return
         }
         try {
             webView.evaluateJavascript(script, null)
         } catch (e: Exception) {
-            Log.e(TAG, "Error evaluating JavaScript: ${e.message}", e)
+            SDKUtils.logError(TAG_WEBVIEW, "Error evaluating JavaScript: ${e.message}", e)
         }
     }
     
@@ -468,22 +497,20 @@ class WebViewManager(
         try {
             webView.loadUrl(url)
         } catch (e: Exception) {
-            if (is_debug_enabled) {
-                Log.e(TAG, "Error loading URL in WebView: ${e.message}", e)
-            }
+            SDKUtils.logError(TAG_WEBVIEW, "Error loading URL in WebView: ${e.message}", e)
             // Log webview failed event
             EventLoggingUtils.safeLogEvent(
                 context,
-                EventConstants.WEBVIEW_FAILED,
-                orderID,
+                eventName = EventConstants.WEBVIEW_FAILED,
+                orderId = orderID,
                 orderToken,
                 subMerchantId,
-                mapOf<String, Any>(
-                    "error_code" to "URL_LOAD_ERROR",
-                    "error_description" to (e.message ?: "Unknown error"),
-                    "url" to url
+                additionalData = mapOf<String, Any>(
+                    EventConstants.KEY_ERROR_CODE to "URL_LOAD_ERROR",
+                    EventConstants.KEY_ERROR_DESCRIPTION to (e.message ?: "Unknown error"),
+                    EventConstants.KEY_URL to url
                 ),
-                PaymentConstants.SDK_VERSION
+                sdkVersion = PaymentConstants.SDK_VERSION
             )
         }
     }
@@ -518,17 +545,12 @@ class WebViewManager(
             webView.clearFormData()
             webView.clearMatches()
             
-            // Force garbage collection of WebView resources
-            System.gc()
-            
             // Destroy WebView
             webView.destroy()
             isDestroyed = true
-            if (is_debug_enabled) {
-                Log.d(TAG, "WebView destroyed successfully with enhanced cleanup")
-            }
+            SDKUtils.logDebug(TAG_WEBVIEW, "WebView destroyed successfully with enhanced cleanup")
         } catch (e: Exception) {
-            Log.e(TAG, "Error destroying WebView: ${e.message}", e)
+            SDKUtils.logError(TAG_WEBVIEW, "Error destroying WebView: ${e.message}", e)
         }
     }
 
@@ -549,12 +571,10 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    if (is_debug_enabled) {
-                        Log.d(TAG, "Attempting to reload page after network error")
-                    }
+                    SDKUtils.logDebug(TAG_WEBVIEW, "Attempting to reload page after network error")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error reloading page: ${e.message}", e)
+                SDKUtils.logError(TAG_WEBVIEW, "Error reloading page: ${e.message}", e)
             }
         }, 3000) // 3 second delay
     }
@@ -568,12 +588,10 @@ class WebViewManager(
             try {
                 if (!isDestroyed()) {
                     webView.reload()
-                    if (is_debug_enabled) {
-                        Log.d(TAG, "Attempting to reload page after timeout error")
-                    }
+                    SDKUtils.logDebug(TAG_WEBVIEW, "Attempting to reload page after timeout error")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error reloading page: ${e.message}", e)
+                SDKUtils.logError(TAG_WEBVIEW, "Error reloading page: ${e.message}", e)
             }
         }, 5000) // 5 second delay
     }
@@ -583,7 +601,7 @@ class WebViewManager(
      */
     private fun handleConnectionError() {
         // Show user-friendly error message
-        Log.e(TAG, "Connection failed. Please check your internet connection.")
+        SDKUtils.logError(TAG_WEBVIEW, "Connection failed. Please check your internet connection.")
     }
     
     /**
@@ -591,7 +609,7 @@ class WebViewManager(
      */
     private fun handleSSLError() {
         // Log SSL error for debugging
-        Log.e(TAG, "SSL handshake failed. This might be due to certificate issues.")
+        SDKUtils.logError(TAG_WEBVIEW, "SSL handshake failed. This might be due to certificate issues.")
     }
     
     /**
@@ -599,6 +617,6 @@ class WebViewManager(
      */
     private fun handleGenericError(errorCode: Int, errorDescription: String) {
         // Log generic error for debugging
-        Log.e(TAG, "Generic WebView error occurred: $errorDescription (Code: $errorCode)")
+        SDKUtils.logError(TAG_WEBVIEW, "Generic WebView error occurred: $errorDescription (Code: $errorCode)")
     }
 } 

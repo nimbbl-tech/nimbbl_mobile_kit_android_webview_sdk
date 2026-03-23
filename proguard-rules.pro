@@ -10,8 +10,6 @@
 -keep public class tech.nimbbl.webviewsdk.core.NimbblCheckoutSDK { *; }
 -keep public class tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions { *; }
 -keep public class tech.nimbbl.webviewsdk.models.NimbblCheckoutUserInfo { *; }
--keep public class tech.nimbbl.webviewsdk.core.NimbblShopOrderCreation { *; }
--keep public class tech.nimbbl.webviewsdk.models.CreateOrderResponse { *; }
 
 # Keep public interfaces
 -keep public interface tech.nimbbl.webviewsdk.models.interfaces.** { *; }
@@ -39,35 +37,15 @@
 -keep class tech.nimbbl.webviewsdk.ui.activity.NimbblCheckoutMainActivity$INimmbleWebViewInterface { *; }
 
 # ===========================================
-# JSON Serialization (Critical)
+# JSON / Model classes (Critical)
 # ===========================================
-# Keep all model classes used for JSON serialization
+# Keep model classes used by org.json
 -keep class tech.nimbbl.webviewsdk.models.** { *; }
 -keep class tech.nimbbl.coreapisdk.api.models.** { *; }
-
-# Keep JSON serialization annotations
--keepclassmembers class * {
-    @com.google.gson.annotations.SerializedName <fields>;
-}
-
-# ===========================================
-# Retrofit Services (Critical)
-# ===========================================
-# Keep Retrofit service interfaces
--keep interface tech.nimbbl.**.api.services.** { *; }
-
-# Keep Retrofit annotations
--keepattributes Signature, InnerClasses, EnclosingMethod
--keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
--keepclassmembers,allowshrinking,allowobfuscation interface * {
-    @retrofit2.http.* <methods>;
-}
 
 # ===========================================
 # Obfuscation Configuration
 # ===========================================
-# Important: Model classes MUST stay in original packages for Gson
-# Don't repackage model classes - Gson needs exact class names and packages
 -keep class tech.nimbbl.webviewsdk.models.** { *; }
 -keep class tech.nimbbl.coreapisdk.api.models.** { *; }
 -keep class tech.nimbbl.coreapisdk.data.models.** { *; }
@@ -82,20 +60,15 @@
 # (These will be obfuscated but still functional)
 
 # ===========================================
-# Dependencies
+# Kotlin / Attributes
 # ===========================================
-# Keep essential dependency classes
--keep class okhttp3.OkHttpClient { *; }
--keep class retrofit2.Retrofit { *; }
--keep class com.google.gson.Gson { *; }
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
 
 # Disable string concatenation optimization (not available on Android)
 -dontoptimize
 
 # Suppress warnings
--dontwarn okhttp3.**
--dontwarn retrofit2.**
--dontwarn com.google.gson.**
 -dontwarn java.lang.invoke.StringConcatFactory
 -dontwarn tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK$Companion
 -dontwarn tech.nimbbl.coreapisdk.utils.extensions.NimbblSDKExtensionsKt

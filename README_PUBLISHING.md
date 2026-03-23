@@ -1,6 +1,36 @@
 ## Nimbbl WebView SDK – Versioning and Publishing
 
-This guide explains how to bump the SDK version and publish snapshot/stable builds to JitPack for the WebView SDK.
+This guide explains how to bump the SDK version and publish to **Maven Central** (Central Portal) or **JitPack** for the WebView SDK.
+
+---
+
+## Maven Central (Central Portal)
+
+WebView SDK publishes to the same Central Portal as Core API SDK. Use the same `.env` (or `centralPortalUsername` / `centralPortalPassword` or `ossrhTokenUsername` / `ossrhTokenSecret`) and signing keys.
+
+### Prerequisites
+- **Core API SDK** must be published first to Maven Central (e.g. `tech.nimbbl:core-api-sdk:4.0.11`). WebView SDK depends on it.
+- `.env` in this project (or Core API SDK project if copying) with:
+  - `centralPortalUsername` / `centralPortalPassword` (or `ossrhTokenUsername` / `ossrhTokenSecret`)
+  - `signing.keyId`, `signing.password`, `signing.secretKeyRingFile`
+- Namespace `tech.nimbbl` verified at [central.sonatype.com](https://central.sonatype.com).
+
+### Publish command
+```bash
+./gradlew publishReleasePublicationToSonatypeRepository --no-daemon
+```
+
+### After upload
+1. **Create deployment** via manual API (same as Core API SDK):
+   - `GET` `https://ossrh-staging-api.central.sonatype.com/manual/search/repositories` with `Authorization: Bearer <base64(username:password)>` → get repo `key`.
+   - `POST` `https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/<key>`.
+2. Open [central.sonatype.com/publishing/deployments](https://central.sonatype.com/publishing/deployments) → click **Publish** on the deployment.
+
+See the Core API SDK **PUBLISHING.md** for full details.
+
+---
+
+## JitPack
 
 ### Prerequisites
 - Clean working tree on the intended branch (snapshot allowed on any branch if your script permits it).

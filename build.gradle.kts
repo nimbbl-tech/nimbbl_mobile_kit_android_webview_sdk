@@ -1,6 +1,27 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Properties
 
+// Load .env into project properties (so findProperty works). .env is gitignored.
+val envFile = rootProject.file(".env")
+if (envFile.exists()) {
+    envFile.reader().use { reader ->
+        reader.readLines().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
+                val idx = trimmed.indexOf('=')
+                if (idx > 0) {
+                    val key = trimmed.substring(0, idx).trim()
+                    val value = trimmed.substring(idx + 1).trim()
+                        .removeSurrounding("\"").removeSurrounding("'")
+                    if (!project.hasProperty(key)) {
+                        rootProject.extensions.extraProperties.set(key, value)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Load version properties
 val versionProperties = Properties()
 val versionPropertiesFile = file("version.properties")
@@ -12,8 +33,18 @@ plugins {
     id("com.android.library")
     kotlin("android") version "1.9.0"
     id("maven-publish")
+    id("signing")
 }
 
+// Dependency versions - aligned with Core API SDK (from version.properties when present)
+val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "4.0.13")
+val coreKtxVersion = "1.12.0"
+val appCompatVersion = "1.6.1"
+val materialVersion = "1.12.0"
+val coroutinesVersion = "1.7.3"
+val junitVersion = "4.13.2"
+val junitExtVersion = "1.1.5"
+val espressoVersion = "3.5.1"
 
 android {
     namespace = "tech.nimbbl.webviewsdk"
@@ -36,7 +67,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true  // Enable SDK obfuscation
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -62,52 +93,47 @@ tasks.withType<KotlinCompile> {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.12.0")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("androidx.core:core-ktx:$coreKtxVersion")
+    implementation("androidx.appcompat:appcompat:$appCompatVersion")
+    implementation("com.google.android.material:material:$materialVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
 
-    // Core API SDK dependency - latest stable
-    //implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.8")
-    //implementation("com.github.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:3.0.15")
-    //implementation("org.bitbucket.nimbbl-tech:nimbbl_mobile_kit_core_api_sdk:v4.0.2")
-    
-    
-    // JAXB dependencies are included via the core API SDK dependency
-    // implementation("javax.xml.bind:jaxb-api:2.3.1")
-    // implementation("org.glassfish.jaxb:jaxb-runtime:2.3.1")
-    // implementation("javax.activation:activation:1.1.1")
+    testImplementation("junit:junit:$junitVersion")
+    androidTestImplementation("androidx.test.ext:junit:$junitExtVersion")
+    androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion")
+
+    // Core API SDK - Maven Central; for local dev comment the Maven line and uncomment the local path
+    implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
+    // implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
 }
+
+// Maven Central coordinates (tech.nimbbl namespace)
+val PUBLISH_GROUP_ID = "tech.nimbbl"
+val PUBLISH_ARTIFACT_ID_WEBVIEW = "webview-sdk"
+val PUBLISH_VERSION = versionProperties.getProperty("SDK_VERSION", "1.0.0")
 
 afterEvaluate {
     publishing {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
-                
-                // JitPack coordinates (for backward compatibility)
-                groupId = "com.github.nimbbl-tech"
-                artifactId = "nimbbl-checkout-sdk"
-                version = versionProperties.getProperty("SDK_VERSION", "1.0.0")
+                groupId = PUBLISH_GROUP_ID
+                artifactId = PUBLISH_ARTIFACT_ID_WEBVIEW
+                version = PUBLISH_VERSION
 
                 pom {
-                    name.set("nimbbl-checkout-sdk")
-                    description.set("Nimbbl Checkout SDK for Android - Semantic Version ${versionProperties.getProperty("SDK_VERSION", "1.0.0")}")
+                    name.set("Nimbbl WebView Checkout SDK")
+                    description.set("Nimbbl Checkout WebView SDK for Android - in-app checkout experience.")
                     url.set("https://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk")
-                    
+                    packaging = "aar"
+
                     licenses {
                         license {
                             name.set("MIT License")
                             url.set("https://opensource.org/licenses/MIT")
                         }
                     }
-                    
+
                     developers {
                         developer {
                             id.set("nimbbl-tech")
@@ -115,7 +141,7 @@ afterEvaluate {
                             email.set("tech@nimbbl.biz")
                         }
                     }
-                    
+
                     scm {
                         connection.set("scm:git:git://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
                         developerConnection.set("scm:git:ssh://github.com/nimbbl-tech/nimbbl_mobile_kit_android_webview_sdk.git")
@@ -124,7 +150,31 @@ afterEvaluate {
                 }
             }
         }
+        repositories {
+            maven {
+                name = "sonatype"
+                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = project.findProperty("centralPortalUsername") as String?
+                        ?: System.getenv("CENTRAL_PORTAL_USERNAME")
+                        ?: project.findProperty("ossrhTokenUsername") as String?
+                        ?: System.getenv("OSSRH_TOKEN_USERNAME")
+                        ?: ""
+                    password = project.findProperty("centralPortalPassword") as String?
+                        ?: System.getenv("CENTRAL_PORTAL_PASSWORD")
+                        ?: project.findProperty("ossrhTokenSecret") as String?
+                        ?: System.getenv("OSSRH_TOKEN_SECRET")
+                        ?: ""
+                }
+            }
+        }
+    }
+    signing {
+        val signingKeyId: String? = project.findProperty("signing.keyId") as String?
+        val signingPassword: String? = project.findProperty("signing.password") as String?
+        val signingKey: String? = project.findProperty("signing.secretKeyRingFile") as String?
+        if (signingKeyId != null && signingPassword != null && signingKey != null) {
+            sign(publishing.publications["release"])
+        }
     }
 }
-
-// Core API SDK is now used as a JitPack dependency from GitHub

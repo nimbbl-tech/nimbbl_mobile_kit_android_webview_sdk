@@ -9,3 +9,12 @@ build/
 .idea/tasks.xml
 .idea/dictionaries/
 .idea/shelf/
+
+# macOS
+.DS_Store
+
+# Local templates (avoid committing duplicates)
+gradle.properties.example
+
+# Local secrets - never commit
+.env
