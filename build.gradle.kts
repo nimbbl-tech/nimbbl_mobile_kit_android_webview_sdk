@@ -103,8 +103,8 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion")
 
     // Core API SDK - Maven Central; for local dev comment the Maven line and uncomment the local path
-    implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
-    // implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    //implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
+    implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
 }
 
 // Maven Central coordinates (tech.nimbbl namespace)

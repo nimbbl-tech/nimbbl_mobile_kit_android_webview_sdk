@@ -52,6 +52,16 @@ class NimbblCheckoutSDK private constructor() {
     private var mContext: Context? = null
     private var currentAppCode: String? = null
 
+    /**
+     * Enables SDK debug logging even for signed/release builds.
+     *
+     * Pass `true` from the host app only when you explicitly want verbose logs.
+     * Pass `null` to fall back to the SDK's default behavior (BuildConfig.DEBUG).
+     */
+    fun setDebugLoggingEnabled(enabled: Boolean?) {
+        SDKUtils.setDebugLoggingEnabled(enabled)
+    }
+
     fun checkout(options: NimbblCheckoutOptions?) {
         // Validate all prerequisites
         val validationResult = ValidationUtils.validateCheckoutPrerequisites(mContext, listener, options)
@@ -308,12 +318,23 @@ class NimbblCheckoutSDK private constructor() {
             return
         }
 
-        // Set base API URL
-        RestApiUtils.NIMBBL_TECH_URL = apiUrl
+        val normalizedInputUrl = apiUrl.trim()
 
-        // Generate WebView URLs dynamically based on the provided base URL
-        val webViewUrl = RestApiUtils.getWebViewUrl(apiUrl)
-        val webViewRespUrl = RestApiUtils.getWebViewResponseUrl(apiUrl)
+        // If caller passes an IP-based URL, we default API calls to QA3 (as per sample-app behavior),
+        // but still allow launching WebView from the IP host (useful for local WebView testing).
+        val resolvedApiBaseUrl = if (isIpBasedUrl(normalizedInputUrl)) {
+            "https://qa3api.qa.nimbbl.tech/"
+        } else {
+            normalizedInputUrl
+        }
+
+        // Set base API URL (used by Core API SDK)
+        RestApiUtils.NIMBBL_TECH_URL = resolvedApiBaseUrl
+
+        // Generate WebView URLs. For IP input, keep the IP for WebView launch.
+        val webViewBaseUrl = if (isIpBasedUrl(normalizedInputUrl)) normalizedInputUrl else resolvedApiBaseUrl
+        val webViewUrl = RestApiUtils.getWebViewUrl(webViewBaseUrl)
+        val webViewRespUrl = RestApiUtils.getWebViewResponseUrl(webViewBaseUrl)
 
         // Update the RestApiUtils URLs
         RestApiUtils.WEB_VIEW_VIEW_URL = webViewUrl
@@ -321,8 +342,12 @@ class NimbblCheckoutSDK private constructor() {
 
         SDKUtils.logDebug(
             TAG_CHECKOUT_SDK,
-            PaymentConstants.LOG_MSG_ENV_SET.format(apiUrl, webViewUrl, webViewRespUrl)
+            PaymentConstants.LOG_MSG_ENV_SET.format(resolvedApiBaseUrl, webViewUrl, webViewRespUrl)
         )
+    }
+
+    private fun isIpBasedUrl(url: String): Boolean {
+        return url.matches(Regex("https?://\\d+\\.\\d+\\.\\d+\\.\\d+(:\\d+)?/?.*"))
     }
 
     @JvmOverloads

@@ -15,6 +15,7 @@ import android.os.Looper
 import android.os.Message
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.ConsoleMessage
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -112,6 +113,15 @@ class WebViewManager(
      * Configure WebView settings with security enhancements
      */
     private fun configureWebViewSettings() {
+        // Enable Chrome DevTools remote debugging for WebView (debug builds only).
+        // This provides the most complete view of WebView network traffic.
+        try {
+            if (SDKUtils.isDebugLoggingEnabled()) {
+                WebView.setWebContentsDebuggingEnabled(true)
+            }
+        } catch (_: Exception) {
+        }
+
         webView.settings.apply {
             // Basic functionality settings
             domStorageEnabled = true
@@ -246,11 +256,13 @@ class WebViewManager(
             }
             
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): android.webkit.WebResourceResponse? {
-                // Optimize resource loading for better performance
                 val url = request?.url?.toString()
-
                 if (url != null) {
-                    SDKUtils.logDebug(TAG_WEBVIEW, "Intercepting request: $url")
+                    val method = request?.method ?: "GET"
+                    val headers = request?.requestHeaders?.let { sanitizeHeaders(it) }.orEmpty()
+                    if (SDKUtils.isDebugLoggingEnabled()) {
+                        SDKUtils.logDebug(TAG_WEBVIEW, "WebView request: $method $url headers=$headers")
+                    }
                 }
                 
                 return super.shouldInterceptRequest(view, request)
@@ -388,6 +400,16 @@ class WebViewManager(
      */
     private fun setupWebChromeClient() {
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                if (SDKUtils.isDebugLoggingEnabled() && consoleMessage != null) {
+                    SDKUtils.logDebug(
+                        TAG_WEBVIEW,
+                        "Console: ${consoleMessage.message()} (${consoleMessage.sourceId()}:${consoleMessage.lineNumber()})"
+                    )
+                }
+                return super.onConsoleMessage(consoleMessage)
+            }
+
             override fun onCreateWindow(
                 view: WebView?,
                 isDialog: Boolean,
@@ -618,5 +640,18 @@ class WebViewManager(
     private fun handleGenericError(errorCode: Int, errorDescription: String) {
         // Log generic error for debugging
         SDKUtils.logError(TAG_WEBVIEW, "Generic WebView error occurred: $errorDescription (Code: $errorCode)")
+    }
+
+    private fun sanitizeHeaders(headers: Map<String, String>): Map<String, String> {
+        if (headers.isEmpty()) return emptyMap()
+        val out = LinkedHashMap<String, String>(headers.size)
+        for ((k, v) in headers) {
+            if (k.equals("Authorization", ignoreCase = true) || k.equals("Cookie", ignoreCase = true)) {
+                out[k] = "***"
+            } else {
+                out[k] = v
+            }
+        }
+        return out
     }
 } 

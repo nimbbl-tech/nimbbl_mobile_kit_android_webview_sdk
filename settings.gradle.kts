@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "nimbbl_mobile_kit_android_webview_sdk"
 // Local Core API SDK (uncomment for development):
-// include(":nimbbl_mobile_kit_core_api_sdk")
-// project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("../nimbbl_mobile_kit_core_api_sdk")
+  include(":nimbbl_mobile_kit_core_api_sdk")
+ project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("../nimbbl_mobile_kit_core_api_sdk")

@@ -6,14 +6,13 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
 import android.util.Log
-import tech.nimbbl.webviewsdk.BuildConfig
 
 class LogUtil {
 
     companion object {
 
         fun debugLog(tag: String, message: String){
-            if (BuildConfig.DEBUG){
+            if (SDKUtils.isDebugLoggingEnabled()){
                 Log.d(tag, message);
             }
         }

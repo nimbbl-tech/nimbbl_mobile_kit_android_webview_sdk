@@ -49,6 +49,17 @@ import java.io.StringWriter
  */
 object SDKUtils {
 
+    @Volatile
+    private var debugLoggingEnabledOverride: Boolean? = null
+
+    fun setDebugLoggingEnabled(enabled: Boolean?) {
+        debugLoggingEnabledOverride = enabled
+    }
+
+    fun isDebugLoggingEnabled(): Boolean {
+        return debugLoggingEnabledOverride ?: BuildConfig.DEBUG
+    }
+
     /**
      * Log error message with consistent formatting
      * @param tag Log tag
@@ -56,7 +67,7 @@ object SDKUtils {
      * @param throwable Optional throwable
      */
     fun logError(tag: String, message: String, throwable: Throwable? = null) {
-        if (BuildConfig.DEBUG) {
+        if (isDebugLoggingEnabled()) {
             if (throwable != null) {
                 Log.e(tag, message, throwable)
             } else {
@@ -71,7 +82,7 @@ object SDKUtils {
      * @param message Debug message
      */
     fun logDebug(tag: String, message: String) {
-        if (BuildConfig.DEBUG) {
+        if (isDebugLoggingEnabled()) {
             Log.d(tag, message)
         }
     }
@@ -82,7 +93,7 @@ object SDKUtils {
      * @param message Warning message
      */
     fun logWarning(tag: String, message: String) {
-        if (BuildConfig.DEBUG) {
+        if (isDebugLoggingEnabled()) {
             Log.w(tag, message)
         }
     }
