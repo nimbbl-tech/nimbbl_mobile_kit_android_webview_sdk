@@ -106,61 +106,31 @@ class NimbblCheckoutOptions : Parcelable {
         private var upiId: String? = null
         private var upiAppCode: String? = null
 
-        /**\
-         * Sets the server URL.
-         * @param key - [URL] of the server where the conference should take place.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setPackageName(key: String?): Builder {
             packageName = key
             return this
         }
 
-        /**
-         * Sets the room where the conference will take place.
-         * @param amount - Name of the room.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setAmount(amount: Int): Builder {
             this.amount = amount
             return this
         }
 
-        /**
-         * Sets the conference subject.
-         * @param currency - Subject for the conference.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setCurrency(currency: String?): Builder {
             this.currency = currency
             return this
         }
 
-        /**
-         * Sets the JWT token to be used for authentication when joining a conference.
-         * @param name - The JWT token to be used for authentication.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setName(name: String?): Builder {
             this.name = name
             return this
         }
 
-        /**
-         * Sets the color scheme override so the app is themed. See:
-         * for the structure.
-         * @param description - A color scheme to be applied to the app.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setDescription(description: String?): Builder {
             this.description = description
             return this
         }
 
-        /**
-         * Indicates the conference will be joined with the microphone muted.
-         * @return - The [Builder] object itself so the method calls can be chained.
-         */
         fun setImage(image: String?): Builder {
             this.image = image
             return this
@@ -248,7 +218,7 @@ class NimbblCheckoutOptions : Parcelable {
         name = `in`.readString()
         description = `in`.readString()
         image = `in`.readString()
-        userInfo = NimbblCheckoutUserInfo(`in`.readBundle()!!)
+        userInfo = if (`in`.readByte() != 0.toByte()) `in`.readBundle()?.let { NimbblCheckoutUserInfo(it) } else null
         subMerchantId = `in`.readString()
         orderToken = `in`.readString()
         paymentModeCode = `in`.readString()
@@ -267,7 +237,9 @@ class NimbblCheckoutOptions : Parcelable {
         dest.writeString(name)
         dest.writeString(description)
         dest.writeString(image)
-        dest.writeBundle(userInfo?.asBundle() ?: Bundle())
+        val bundle = userInfo?.asBundle()
+        dest.writeByte(if (bundle != null) 1 else 0)
+        if (bundle != null) dest.writeBundle(bundle)
         dest.writeString(subMerchantId)
         dest.writeString(orderToken)
         dest.writeString(paymentModeCode)

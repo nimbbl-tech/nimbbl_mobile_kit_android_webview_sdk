@@ -5,19 +5,21 @@ Created by Sandeep Yadav on 23/07/25.
 Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
+import android.content.Context
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_LISTENER_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_OPTIONS_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_ORDER_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_SUBMERCHANT_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_TOKEN_NULL
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_INIT_FAILED
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_CHECKOUT_REFERENCE_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_LISTENER_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_OPTIONS_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_ORDER_ID_NULL
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_REFERENCE_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_SUBMERCHANT_ID_NULL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_CHECKOUT_TOKEN_NULL
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_INIT_FAILED
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
+import tech.nimbbl.webviewsdk.models.interfaces.NimbblCheckoutPaymentListener
 
 /**
  * Utility class for input validation
@@ -56,11 +58,11 @@ object ValidationUtils {
      * @param context Context to validate
      * @return Validation result
      */
-    fun validateContext(context: Any?): ValidationResult {
+    fun validateContext(context: Context?): ValidationResult {
         return when {
             context == null -> ValidationResult.Error(
-                ERROR_MESSAGE_INIT_FAILED,
-                ERROR_CODE_INIT_FAILED
+                ERROR_MESSAGE_CHECKOUT_REFERENCE_NULL,
+                ERROR_CODE_CHECKOUT_REFERENCE_NULL
             )
             else -> ValidationResult.Success
         }
@@ -71,7 +73,7 @@ object ValidationUtils {
      * @param listener Listener to validate
      * @return Validation result
      */
-    fun validateListener(listener: Any?): ValidationResult {
+    fun validateListener(listener: NimbblCheckoutPaymentListener?): ValidationResult {
         return when {
             listener == null -> ValidationResult.Error(
                 ERROR_MESSAGE_CHECKOUT_LISTENER_NULL,
@@ -120,8 +122,8 @@ object ValidationUtils {
      * @return Validation result
      */
     fun validateCheckoutPrerequisites(
-        context: Any?,
-        listener: Any?,
+        context: Context?,
+        listener: NimbblCheckoutPaymentListener?,
         options: NimbblCheckoutOptions?
     ): ValidationResult {
         // Validate context

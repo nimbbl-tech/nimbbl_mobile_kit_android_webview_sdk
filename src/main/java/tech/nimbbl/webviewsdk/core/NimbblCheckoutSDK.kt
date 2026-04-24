@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.RestrictTo
 import androidx.core.content.ContextCompat
 import org.json.JSONException
 import org.json.JSONObject
@@ -25,10 +26,8 @@ import tech.nimbbl.coreapisdk.utils.extensions.getMerchantIDFromJwtToken
 import tech.nimbbl.coreapisdk.utils.extensions.md5
 import tech.nimbbl.coreapisdk.utils.extensions.parseJwtToken
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.ACTION_PAYMENT_RESULT
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROADCAST_PAYMENT_RESULT
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_API_URL_NULL
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_TAG_OPTIONS
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_INIT_FAILED
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_UNKNOWN_ERROR
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_ORDER_ID
@@ -44,16 +43,23 @@ import java.lang.ref.WeakReference
 
 
 class NimbblCheckoutSDK private constructor() {
-    private var myActivityReference: WeakReference<Activity?>? = null
+    private var myActivityReference: WeakReference<Activity>? = null
     private var receiver: PaymentEventBroadCastReceiver? = null
     @Volatile
     private var isReceiverRegistered = false
-    private var listener: NimbblCheckoutPaymentListener? = null
+    // WeakReference prevents the singleton from leaking the Activity via the listener callback
+    private var listener: WeakReference<NimbblCheckoutPaymentListener>? = null
+    // applicationContext is safe to hold in a singleton; never store Activity context here
     private var mContext: Context? = null
+    // Weak ref to the host Activity used only for startActivity so checkout opens in the same task
+    private var hostActivity: WeakReference<Activity>? = null
     private var currentAppCode: String? = null
 
     /**
      * Enables SDK debug logging even for signed/release builds.
+     *
+     * Must be called before [init] — changes after init() are not guaranteed to
+     * take effect for all in-flight operations.
      *
      * Pass `true` from the host app only when you explicitly want verbose logs.
      * Pass `null` to fall back to the SDK's default behavior (BuildConfig.DEBUG).
@@ -64,11 +70,9 @@ class NimbblCheckoutSDK private constructor() {
 
     fun checkout(options: NimbblCheckoutOptions?) {
         // Validate all prerequisites
-        val validationResult = ValidationUtils.validateCheckoutPrerequisites(mContext, listener, options)
+        val validationResult = ValidationUtils.validateCheckoutPrerequisites(mContext, listener?.get(), options)
         if (validationResult is ValidationUtils.ValidationResult.Error) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_CHECKOUT_VALIDATION_FAILED.format(validationResult.message))
-
-            // Log validation failure event
             SDKUtils.logEventWithVersion(
                 mContext,
                 EventConstants.EXCEPTION_THROWN,
@@ -82,29 +86,28 @@ class NimbblCheckoutSDK private constructor() {
                     PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                 )
             )
-            
-            // Call listener with error if available
-            listener?.onCheckoutResponse(data = SDKUtils.createErrorResponse(validationResult.errorType))
+            listener?.get()?.onCheckoutResponse(data = SDKUtils.createErrorResponse(validationResult.errorType))
             return
         }
 
-        // Store the appCode for later use
+        // Validation passed: mContext is guaranteed non-null from here on
+        val ctx = mContext!!
 
         // CHECKOUT_005 & CHECKOUT_006: Check for null orderId and subMerchantId in token
         try {
-            val orderId = parseJwtToken(mContext!!, options?.orderToken!!)
-            val subMerchantId = getMerchantIDFromJwtToken(mContext!!, options.orderToken!!)
+            val safeOptions = options!!         // validated non-null above
+            val token = safeOptions.orderToken!! // validated non-null above
+            val orderId = parseJwtToken(ctx, token)
+            val subMerchantId = getMerchantIDFromJwtToken(ctx, token)
 
-            // Validate order ID
             val orderIdValidation = ValidationUtils.validateOrderId(orderId)
             if (orderIdValidation is ValidationUtils.ValidationResult.Error) {
                 SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ORDER_ID_VALIDATION_FAILED.format(orderIdValidation.message))
-                // Log validation failure event
                 SDKUtils.logEventWithVersion(
-                    mContext!!,
+                    ctx,
                     EventConstants.EXCEPTION_THROWN,
                     null,
-                    options.orderToken,
+                    token,
                     null,
                     mapOf<String, Any>(
                         PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_ORDER_ID_VALIDATION_FAILED,
@@ -113,21 +116,18 @@ class NimbblCheckoutSDK private constructor() {
                         PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                     )
                 )
-                // Call listener with checkout failed
-                listener?.onCheckoutResponse(data = SDKUtils.createErrorResponse(orderIdValidation.errorType))
+                listener?.get()?.onCheckoutResponse(data = SDKUtils.createErrorResponse(orderIdValidation.errorType))
                 return
             }
 
-            // Validate sub merchant ID
             val subMerchantIdValidation = ValidationUtils.validateSubMerchantId(subMerchantId)
             if (subMerchantIdValidation is ValidationUtils.ValidationResult.Error) {
                 SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_SUBMERCHANT_ID_VALIDATION_FAILED.format(subMerchantIdValidation.message))
-                // Log validation failure event
                 SDKUtils.logEventWithVersion(
-                    mContext!!,
+                    ctx,
                     EventConstants.EXCEPTION_THROWN,
                     orderId,
-                    options.orderToken,
+                    token,
                     null,
                     mapOf<String, Any>(
                         PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_SUBMERCHANT_ID_VALIDATION_FAILED,
@@ -136,105 +136,43 @@ class NimbblCheckoutSDK private constructor() {
                         PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                     )
                 )
-                // Call listener with checkout failed
-                listener?.onCheckoutResponse(data = SDKUtils.createErrorResponse(subMerchantIdValidation.errorType))
+                listener?.get()?.onCheckoutResponse(data = SDKUtils.createErrorResponse(subMerchantIdValidation.errorType))
                 return
             }
 
-            // Log checkout initiated event (non-blocking)
             SDKUtils.logEventWithVersion(
-                mContext!!,
+                ctx,
                 EventConstants.CHECKOUT_INITIATED,
                 orderId,
-                options.orderToken,
+                token,
                 subMerchantId
             )
 
         } catch (e: Exception) {
-            // Event logging failed but don't impact the main flow
             SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_EVENT_LOGGING_FAILED_CHECKOUT.format(e.message))
+            listener?.get()?.onCheckoutResponse(data = SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR))
+            return
         }
 
         try {
-
-            val intent = Intent(
-                mContext,
-                tech.nimbbl.webviewsdk.ui.activity.NimbblCheckoutMainActivity::class.java
-            )
-            intent.putExtra(PaymentConstants.EXTRA_TAG_OPTIONS, options)
-            mContext!!.startActivity(intent)
-
-            // Check for null receiver before registering
-            if (receiver == null) {
-                SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_RECEIVER_NULL)
-                // Log null receiver event
-                SDKUtils.logEventWithVersion(
-                    mContext!!,
-                    EventConstants.EXCEPTION_THROWN,
-                    null,
-                    options!!.orderToken,
-                    null,
-                    mapOf<String, Any>(
-                        PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_RECEIVER_NULL,
-                        PaymentConstants.EVENT_KEY_LOCATION to PaymentConstants.EVENT_LOCATION_CHECKOUT_METHOD,
-                        PaymentConstants.EVENT_KEY_ERROR_MESSAGE to PaymentConstants.EVENT_MSG_RECEIVER_NULL,
-                        PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
-                    )
-                )
-                return
+            val intent = Intent(ctx, tech.nimbbl.webviewsdk.ui.activity.NimbblCheckoutMainActivity::class.java).apply {
+                putExtra(PaymentConstants.EXTRA_TAG_OPTIONS, options)
             }
-
-            // Use ContextCompat to handle flags automatically for all API levels
-            try {
-                // Check if receiver is already registered to prevent double registration
-                // Synchronize to prevent race conditions
-                synchronized(this) {
-                    when {
-                        mContext != null && !isReceiverRegistered -> {
-                            ContextCompat.registerReceiver(
-                                mContext!!, receiver, IntentFilter(BROADCAST_PAYMENT_RESULT),
-                                ContextCompat.RECEIVER_NOT_EXPORTED
-                            )
-                            isReceiverRegistered = true
-                            SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_BROADCAST_REG_SUCCESS)
-                        }
-                        isReceiverRegistered -> {
-                            SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_BROADCAST_ALREADY_REGISTERED)
-                        }
-                        else -> {
-                            SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_CONTEXT_NULL_REGISTER)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-               SDKUtils.logError(
-                   TAG_CHECKOUT_SDK,
-                   PaymentConstants.LOG_MSG_ERROR_REGISTERING_RECEIVER.format(e.message),
-                   e
-               )
-                // Log exception event
-                SDKUtils.logEventWithVersion(
-                    mContext!!,
-                    EventConstants.EXCEPTION_THROWN,
-                    null,
-                    options!!.orderToken,
-                    null,
-                    mapOf<String, Any>(
-                        PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_BROADCAST_REGISTRATION_FAILED,
-                        PaymentConstants.EVENT_KEY_LOCATION to PaymentConstants.EVENT_LOCATION_CHECKOUT_METHOD,
-                        PaymentConstants.EVENT_KEY_ERROR_MESSAGE to PaymentConstants.EVENT_MSG_BROADCAST_REG_FAILED,
-                        PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace(e)
-                    )
-                )
+            // Prefer launching from the live host Activity to keep the checkout in the same task.
+            // Fall back to applicationContext (requires NEW_TASK) if the Activity has been GC'd.
+            val launchCtx: Context = hostActivity?.get()?.takeIf { !it.isFinishing } ?: run {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx
             }
+            launchCtx.startActivity(intent)
+            SDKUtils.logDebug(TAG_CHECKOUT_SDK, "Checkout Activity launched; receiver registered in init()")
         } catch (e: Exception) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, "Checkout error: ${e.message}", e)
-            // Log exception thrown event (non-blocking)
             SDKUtils.logEventWithVersion(
-                mContext!!,
+                ctx,
                 EventConstants.EXCEPTION_THROWN,
-                null, // orderId will be extracted from token in MainActivity
-                options!!.orderToken,
+                null,
+                options?.orderToken,
                 null,
                 mapOf<String, Any>(
                     PaymentConstants.EVENT_KEY_ERROR to (e.message ?: PaymentConstants.EVENT_MSG_UNKNOWN_ERROR),
@@ -243,14 +181,13 @@ class NimbblCheckoutSDK private constructor() {
                     PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace(e)
                 )
             )
+            listener?.get()?.onCheckoutResponse(data = SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR))
         }
     }
 
-    fun dismissReactActivity() {
-        // Check for null myActivityReference
+    private fun dismissCheckoutActivity() {
         if (myActivityReference == null) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_DISMISS_ACTIVITY_REF_NULL)
-            // Log null myActivityReference event
             mContext?.let {
                 SDKUtils.logEventWithVersion(
                     it,
@@ -270,32 +207,23 @@ class NimbblCheckoutSDK private constructor() {
         }
 
         myActivityReference?.get()?.let { activity ->
-            val handler = Handler(Looper.getMainLooper())
-            handler.post {
+            Handler(Looper.getMainLooper()).post {
                 try {
                     activity.finish()
                 } catch (e: Exception) {
                     SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ERROR_FINISHING_ACTIVITY.format(e.message), e)
                 }
             }
-        } ?: run {
-            SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_DISMISS_ACTIVITY_NULL)
-            // Call listener with payment failed if context is available, otherwise just log
-            if (mContext != null) {
-                listener?.onCheckoutResponse(
-                    data = SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR)
-                )
-            }
-        }
+        } ?: SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_DISMISS_ACTIVITY_NULL)
+        // Payment result callbacks are always delivered via handlePaymentResult, never here
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun setMyActivityWeakReference(myActivityReference: Activity?) {
-        // Check for null activity
         if (myActivityReference == null) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_SET_ACTIVITY_REF_NULL)
-            // Call listener with payment failed if context is available, otherwise just log
             if (mContext != null) {
-                listener?.onCheckoutResponse(
+                listener?.get()?.onCheckoutResponse(
                     data = SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR)
                 )
             }
@@ -306,37 +234,33 @@ class NimbblCheckoutSDK private constructor() {
     }
 
     fun setEnvironmentUrl(apiUrl: String) {
-        // Check for null or empty apiUrl
         if (apiUrl.isEmpty()) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ENV_URL_NULL)
-            // Call listener with payment failed if context is available, otherwise just log
             if (mContext != null) {
-            listener?.onCheckoutResponse(
-                SDKUtils.createErrorResponse(ERROR_CODE_API_URL_NULL)
-            )
+                listener?.get()?.onCheckoutResponse(
+                    SDKUtils.createErrorResponse(ERROR_CODE_API_URL_NULL)
+                )
             }
             return
         }
 
         val normalizedInputUrl = apiUrl.trim()
+        val isIpUrl = isIpBasedUrl(normalizedInputUrl)
 
         // If caller passes an IP-based URL, we default API calls to QA3 (as per sample-app behavior),
         // but still allow launching WebView from the IP host (useful for local WebView testing).
-        val resolvedApiBaseUrl = if (isIpBasedUrl(normalizedInputUrl)) {
+        val resolvedApiBaseUrl = if (isIpUrl) {
             "https://qa3api.qa.nimbbl.tech/"
         } else {
             normalizedInputUrl
         }
 
-        // Set base API URL (used by Core API SDK)
         RestApiUtils.NIMBBL_TECH_URL = resolvedApiBaseUrl
 
-        // Generate WebView URLs. For IP input, keep the IP for WebView launch.
-        val webViewBaseUrl = if (isIpBasedUrl(normalizedInputUrl)) normalizedInputUrl else resolvedApiBaseUrl
+        val webViewBaseUrl = if (isIpUrl) normalizedInputUrl else resolvedApiBaseUrl
         val webViewUrl = RestApiUtils.getWebViewUrl(webViewBaseUrl)
         val webViewRespUrl = RestApiUtils.getWebViewResponseUrl(webViewBaseUrl)
 
-        // Update the RestApiUtils URLs
         RestApiUtils.WEB_VIEW_VIEW_URL = webViewUrl
         RestApiUtils.WEB_VIEW_RESP_CHECK_URL = webViewRespUrl
 
@@ -354,32 +278,46 @@ class NimbblCheckoutSDK private constructor() {
     fun init(activity: Activity?, appCode: String? = null) {
         if (activity == null) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_INIT_ACTIVITY_NULL)
-            // Cannot call listener since activity is null and listener is set to activity
-            // Just return without calling listener
             return
         }
 
-        listener = activity as? NimbblCheckoutPaymentListener
-        if (listener == null) {
-            SDKUtils.logError(TAG_CHECKOUT_SDK, "Activity must implement NimbblCheckoutPaymentListener")
-            return
+        val listenerImpl = activity as? NimbblCheckoutPaymentListener
+            ?: throw IllegalArgumentException(
+                "Activity must implement NimbblCheckoutPaymentListener. " +
+                "Add `implements NimbblCheckoutPaymentListener` to your Activity."
+            )
+        listener = WeakReference(listenerImpl)
+        // applicationContext never leaks; the Activity is held only weakly via hostActivity
+        mContext = activity.applicationContext
+        hostActivity = WeakReference(activity)
+        synchronized(this) {
+            if (receiver != null && isReceiverRegistered) {
+                try { mContext!!.unregisterReceiver(receiver) } catch (_: Exception) {}
+                isReceiverRegistered = false
+            }
+            receiver = PaymentEventBroadCastReceiver()
+            // Register immediately so the receiver is ready before the Activity launches in checkout()
+            try {
+                ContextCompat.registerReceiver(
+                    mContext!!, receiver, IntentFilter(BROADCAST_PAYMENT_RESULT),
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+                isReceiverRegistered = true
+                SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_BROADCAST_REG_SUCCESS)
+            } catch (e: Exception) {
+                SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ERROR_REGISTERING_RECEIVER.format(e.message), e)
+            }
         }
-        mContext = activity
-        receiver = PaymentEventBroadCastReceiver()
-        isReceiverRegistered = false
-        
-        // Set the app code if provided
+
         if (!appCode.isNullOrEmpty()) {
             currentAppCode = appCode
         }
 
-        // Check for null device fingerprint or device ID
         val deviceFingerPrint = getDeviceFingerPrint()
         val deviceID = getDeviceID()
 
         if (deviceFingerPrint.isNullOrEmpty()) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_INIT_FINGERPRINT_NULL)
-            // Log null deviceFingerPrint event
             try {
                 NimbblCoreApiSDK.getInstance()?.logEvent(
                     activity,
@@ -393,9 +331,9 @@ class NimbblCheckoutSDK private constructor() {
                         PaymentConstants.EVENT_KEY_ERROR_MESSAGE to PaymentConstants.EVENT_MSG_DEVICE_FINGERPRINT_NULL,
                         PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                     ),
-                    null, // customUserAgent
-                    null, // customDeviceInfo
-                    mapOf("appVersion" to PaymentConstants.SDK_VERSION), // customAppInfo
+                    null,
+                    null,
+                    mapOf("appVersion" to PaymentConstants.SDK_VERSION),
                 )
             } catch (e: Exception) {
                 SDKUtils.logWarning(
@@ -403,8 +341,7 @@ class NimbblCheckoutSDK private constructor() {
                     PaymentConstants.LOG_MSG_EVENT_LOGGING_FAILED_FINGERPRINT.format(e.message)
                 )
             }
-            // Return initialization error
-            listener?.onCheckoutResponse(
+            listener?.get()?.onCheckoutResponse(
                 data = SDKUtils.createErrorResponse(ERROR_CODE_INIT_FAILED)
             )
             return
@@ -412,7 +349,6 @@ class NimbblCheckoutSDK private constructor() {
 
         if (deviceID.isNullOrEmpty()) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_INIT_DEVICE_ID_NULL)
-            // Log null deviceID event
             SDKUtils.logEventWithVersion(
                 activity,
                 EventConstants.EXCEPTION_THROWN,
@@ -426,8 +362,7 @@ class NimbblCheckoutSDK private constructor() {
                     PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                 )
             )
-            // Return initialization error
-            listener?.onCheckoutResponse(
+            listener?.get()?.onCheckoutResponse(
                 data = SDKUtils.createErrorResponse(ERROR_CODE_INIT_FAILED)
             )
             return
@@ -437,7 +372,6 @@ class NimbblCheckoutSDK private constructor() {
         NimbblCoreApiSDK.getInstance()
             ?.initialiseAPISDK(RestApiUtils.NIMBBL_TECH_URL, fingerPrint, deviceFingerPrint, currentAppCode)
 
-        // Log SDK initialized event (non-blocking)
         SDKUtils.logEventWithVersion(
             activity,
             EventConstants.SDK_INITIALIZED,
@@ -446,30 +380,21 @@ class NimbblCheckoutSDK private constructor() {
             null,
             mapOf<String, Any>(SDK_VERSION_KEY to PaymentConstants.SDK_VERSION)
         )
-
     }
 
     private inner class PaymentEventBroadCastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
-            // Check for null context
             if (context == null) {
                 SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_RECEIVER_CONTEXT_NULL)
                 return
             }
 
-            // Intent is guaranteed to be non-null as it's a parameter
-
             val action = intent.action
             val data = intent.getStringExtra(EXTRA_PAYMENT_DATA)
             val orderId = intent.getStringExtra(EXTRA_ORDER_ID)
 
-            // Check for null action
             if (action.isNullOrEmpty()) {
-                SDKUtils.logError(
-                    TAG_CHECKOUT_SDK,
-                    PaymentConstants.LOG_MSG_RECEIVER_ACTION_NULL
-                )
-                // Log null action event
+                SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_RECEIVER_ACTION_NULL)
                 SDKUtils.logEventWithVersion(
                     context,
                     EventConstants.EXCEPTION_THROWN,
@@ -486,37 +411,21 @@ class NimbblCheckoutSDK private constructor() {
                 return
             }
 
-            // Validate action is one of the expected actions
-            if (action != ACTION_PAYMENT_RESULT) {
-                SDKUtils.logWarning(
-                    TAG_CHECKOUT_SDK,
-                    PaymentConstants.LOG_MSG_RECEIVER_UNKNOWN_ACTION.format(action)
-                )
+            if (action != BROADCAST_PAYMENT_RESULT) {
+                SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_RECEIVER_UNKNOWN_ACTION.format(action))
                 return
             }
 
-            // Handle activity dismissal for both success and failure
-            myActivityReference?.get()?.let { _ ->
-                dismissReactActivity()
-            } ?: run {
-                SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ACTIVITY_REF_NULL)
-            }
-
+            // dismissCheckoutActivity handles null refs internally; the result callback is
+            // delivered solely by handlePaymentResult, preventing any double-callback
+            dismissCheckoutActivity()
             handlePaymentResult(context, data, orderId)
         }
 
-        /**
-         * Handle payment success
-         */
         private fun handlePaymentResult(context: Context, data: String?, orderId: String?) {
             try {
-                // Check for null data
                 if (data.isNullOrEmpty()) {
-                    SDKUtils.logError(
-                        TAG_CHECKOUT_SDK,
-                        PaymentConstants.LOG_MSG_PAYMENT_DATA_NULL
-                    )
-                    // Log null data event
+                    SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_PAYMENT_DATA_NULL)
                     SDKUtils.logEventWithVersion(
                         context,
                         EventConstants.EXCEPTION_THROWN,
@@ -530,12 +439,10 @@ class NimbblCheckoutSDK private constructor() {
                             PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
                         )
                     )
+                    listener?.get()?.onCheckoutResponse(SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR))
                     return
                 }
 
-                // Use orderId from broadcast intent
-
-                // Log payment success event (non-blocking)
                 SDKUtils.logEventWithVersion(
                     context,
                     EventConstants.PAYMENT_STATUS,
@@ -545,13 +452,9 @@ class NimbblCheckoutSDK private constructor() {
                     mapOf<String, Any>(PaymentConstants.EVENT_KEY_PAYMENT_DATA to data)
                 )
 
-                // Check for null listener
-                if (listener == null) {
-                    SDKUtils.logError(
-                        TAG_CHECKOUT_SDK,
-                        PaymentConstants.LOG_MSG_LISTENER_NULL_PAYMENT
-                    )
-                    // Log null listener event
+                val l = listener?.get()
+                if (l == null) {
+                    SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_LISTENER_NULL_PAYMENT)
                     SDKUtils.logEventWithVersion(
                         context,
                         EventConstants.EXCEPTION_THROWN,
@@ -568,11 +471,10 @@ class NimbblCheckoutSDK private constructor() {
                 } else {
                     try {
                         val parsedData = jsonString2Map(data)
-                        listener?.onCheckoutResponse(parsedData)
+                        l.onCheckoutResponse(parsedData)
                     } catch (e: Exception) {
                         SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ERROR_PARSING_PAYMENT.format(e.message), e)
                         SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_RAW_DATA.format(data.take(200)))
-                        // Log parsing error event (non-blocking)
                         SDKUtils.logEventWithVersion(
                             context,
                             EventConstants.EXCEPTION_THROWN,
@@ -586,13 +488,12 @@ class NimbblCheckoutSDK private constructor() {
                                 PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace(e)
                             )
                         )
-                        // Return empty map as fallback
-                        listener?.onCheckoutResponse(mutableMapOf())
+                        // Return an explicit error so merchants can distinguish failure from success
+                        l.onCheckoutResponse(SDKUtils.createErrorResponse(ERROR_CODE_UNKNOWN_ERROR))
                     }
                 }
             } catch (e: Exception) {
                 SDKUtils.logError(TAG_CHECKOUT_SDK, "Error handling payment result: ${e.message}", e)
-                // Log payment failed event (non-blocking)
                 SDKUtils.logEventWithVersion(
                     context,
                     EventConstants.EXCEPTION_THROWN,
@@ -608,24 +509,19 @@ class NimbblCheckoutSDK private constructor() {
                 )
             }
         }
-
     }
-
-
 
     private fun jsonString2Map(jsonString: String): MutableMap<String, Any> {
         val keys: MutableMap<String, Any> = HashMap()
-        
-        // Validate input
+
         if (jsonString.isBlank()) {
             SDKUtils.logWarning(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_JSON_STRING_EMPTY)
             return keys
         }
-        
+
         try {
             val jsonObject = JSONObject(jsonString)
-            
-            // Check if this has a payload field and extract only the payload content
+
             if (jsonObject.has(JSON_PAYLOAD_FIELD)) {
                 val payloadString = jsonObject.optString(JSON_PAYLOAD_FIELD, "")
                 if (payloadString.isNotEmpty()) {
@@ -634,8 +530,7 @@ class NimbblCheckoutSDK private constructor() {
                         val keyset: Iterator<*> = payloadJson.keys()
                         while (keyset.hasNext()) {
                             val key = keyset.next() as String
-                            val value = payloadJson[key]
-                            keys[key] = value
+                            keys[key] = payloadJson[key]
                         }
                         return keys
                     } catch (e: JSONException) {
@@ -643,49 +538,36 @@ class NimbblCheckoutSDK private constructor() {
                     }
                 }
             }
-            
-            // Fallback to original behavior if no payload field or parsing fails
+
             val keyset: Iterator<*> = jsonObject.keys()
             while (keyset.hasNext()) {
                 val key = keyset.next() as String
-                val value = jsonObject[key]
-                keys[key] = value
+                keys[key] = jsonObject[key]
             }
         } catch (e: JSONException) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_JSON_PARSING_ERROR.format(e.message), e)
         } catch (e: Exception) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_UNEXPECTED_ERROR.format(e.message), e)
         }
-        
+
         return keys
     }
 
-
-    /**
-     * Check if SDK is cleaned up
-     * @return true if SDK is cleaned up, false otherwise
-     */
-    fun isCleanedUp(): Boolean {
-        return mContext == null && listener == null && receiver == null && myActivityReference == null && !isReceiverRegistered
+    // Must only be called while holding the `this` lock — reads isReceiverRegistered without locking itself
+    private fun isCleanedUp(): Boolean {
+        return mContext == null && listener == null && receiver == null &&
+               myActivityReference == null && hostActivity == null && !isReceiverRegistered
     }
 
-    /**
-     * Clean up SDK resources
-     * This method should be called when the SDK is no longer needed
-     * to prevent memory leaks and properly unregister broadcast receivers
-     */
     fun cleanup() {
-        // Prevent multiple cleanup calls
-        if (isCleanedUp()) {
-            SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_SDK_ALREADY_CLEANED)
-            return
-        }
-
+        var savedCtx: Context? = null
         try {
-            // Store context reference for logging before clearing
-            // Unregister broadcast receiver if registered
-            // Synchronize to prevent race conditions during cleanup
             synchronized(this) {
+                if (isCleanedUp()) {
+                    SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_SDK_ALREADY_CLEANED)
+                    return
+                }
+                savedCtx = mContext  // capture before clearing for catch-block logging
                 if (receiver != null && mContext != null && isReceiverRegistered) {
                     try {
                         mContext!!.unregisterReceiver(receiver)
@@ -696,28 +578,20 @@ class NimbblCheckoutSDK private constructor() {
                         isReceiverRegistered = false
                     }
                 }
+                hostActivity?.clear()
+                hostActivity = null
+                myActivityReference?.clear()
+                myActivityReference = null
+                listener = null
+                mContext = null
+                receiver = null
             }
-
-            // Clear activity reference
-            myActivityReference?.clear()
-            myActivityReference = null
-
-            // Clear listener reference
-            listener = null
-
-            // Clear context reference
-            mContext = null
-
-            // Clear receiver reference
-            receiver = null
 
             SDKUtils.logDebug(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_CLEANUP_SUCCESS)
 
         } catch (e: Exception) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_ERROR_DURING_CLEANUP.format(e.message), e)
-
-            // Log cleanup failure event using stored context reference
-            mContext?.let {
+            savedCtx?.let {
                 SDKUtils.logEventWithVersion(
                     it,
                     EventConstants.EXCEPTION_THROWN,
@@ -736,13 +610,15 @@ class NimbblCheckoutSDK private constructor() {
     }
 
     companion object {
+        // INSTANCE holds applicationContext (not Activity context), so no real leak exists.
+        // @SuppressLint retained because lint cannot distinguish applicationContext from Activity context.
         @SuppressLint("StaticFieldLeak")
         @Volatile
         private var INSTANCE: NimbblCheckoutSDK? = null
 
         /**
-         * Get singleton instance of NimbblCheckoutSDK
-         * Thread-safe implementation using double-checked locking
+         * Get singleton instance of NimbblCheckoutSDK.
+         * Thread-safe implementation using double-checked locking.
          */
         @JvmStatic
         fun getInstance(): NimbblCheckoutSDK {
@@ -750,8 +626,5 @@ class NimbblCheckoutSDK private constructor() {
                 INSTANCE ?: NimbblCheckoutSDK().also { INSTANCE = it }
             }
         }
-
-
-        
     }
 }

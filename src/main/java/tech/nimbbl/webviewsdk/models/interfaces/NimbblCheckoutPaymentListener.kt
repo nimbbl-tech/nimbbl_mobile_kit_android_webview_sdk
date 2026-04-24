@@ -6,13 +6,13 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
 /**
- * Interface for listening to events coming from Nimbbl Checkout SDK.
+ * Interface for receiving payment results from the Nimbbl Checkout SDK.
  */
 interface NimbblCheckoutPaymentListener {
     /**
-     * Called when a conference was joined.
+     * Called when the checkout flow completes — either successfully or with a failure.
      *
-     * @param data Map with a "url" key with the conference URL.
+     * @param data Map containing the payment result fields (e.g. order status, error codes).
      */
     fun onCheckoutResponse(data: MutableMap<String, Any>)
 } 

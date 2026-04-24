@@ -67,12 +67,10 @@ object SDKUtils {
      * @param throwable Optional throwable
      */
     fun logError(tag: String, message: String, throwable: Throwable? = null) {
-        if (isDebugLoggingEnabled()) {
-            if (throwable != null) {
-                Log.e(tag, message, throwable)
-            } else {
-                Log.e(tag, message)
-            }
+        if (throwable != null) {
+            Log.e(tag, message, throwable)
+        } else {
+            Log.e(tag, message)
         }
     }
 
@@ -93,9 +91,7 @@ object SDKUtils {
      * @param message Warning message
      */
     fun logWarning(tag: String, message: String) {
-        if (isDebugLoggingEnabled()) {
-            Log.w(tag, message)
-        }
+        Log.w(tag, message)
     }
 
     /**
@@ -234,21 +230,4 @@ object SDKUtils {
         return stringWriter.toString()
     }
 
-    /**
-     * Check if string is null or empty
-     * @param value String to check
-     * @return true if null or empty
-     */
-    fun isNullOrEmpty(value: String?): Boolean {
-        return value.isNullOrEmpty()
-    }
-
-    /**
-     * Check if context is valid
-     * @param context Context to check
-     * @return true if context is valid
-     */
-    fun isValidContext(context: Context?): Boolean {
-        return context != null
-    }
 }

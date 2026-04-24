@@ -52,6 +52,7 @@ object PaymentConstants {
 
     // UPI Error Messages
     const val ERROR_UNABLE_TO_LAUNCH_UPI = "Unable to launch UPI app."
+    const val ERROR_NO_UPI_APP_FOUND = "No UPI app found to handle this request"
 
     // SDK Actions
     const val SDK_ACTION_DEVICE_BACK_INITIATED = "device_back_initiated"
@@ -73,7 +74,6 @@ object PaymentConstants {
     
     // Broadcast actions
     const val BROADCAST_PAYMENT_RESULT = "PaymentResult"
-    const val ACTION_PAYMENT_RESULT = "PaymentResult"
 
     // Broadcast extras
     const val EXTRA_PAYMENT_DATA = "data"
@@ -90,7 +90,6 @@ object PaymentConstants {
     // Log tags
     const val TAG_MAIN_ACTIVITY = "NimbblCheckoutMain"
     const val TAG_BACK_HANDLER = "BackHandler"
-    const val TAG_SAN = "SAN"
     const val TAG_CHECKOUT_SDK = "NimbblCheckoutSDK"
     const val TAG_PAYMENT_HANDLER = "PaymentHandler"
     const val TAG_PAYMENT_URL_BUILDER = "PaymentURLBuilder"
@@ -123,7 +122,7 @@ object PaymentConstants {
 
     // Event Location Values
     const val EVENT_LOCATION_CHECKOUT_METHOD = "checkout_method"
-    const val EVENT_LOCATION_DISMISS_ACTIVITY = "dismissReactActivity"
+    const val EVENT_LOCATION_DISMISS_ACTIVITY = "dismissCheckoutActivity"
     const val EVENT_LOCATION_INIT_METHOD = "init_method"
     const val EVENT_LOCATION_BROADCAST_RECEIVER = "PaymentEventBroadCastReceiver"
     const val EVENT_LOCATION_PAYMENT_SUCCESS = "PaymentEventBroadCastReceiver_PaymentSuccess"
@@ -152,9 +151,9 @@ object PaymentConstants {
     const val LOG_MSG_BROADCAST_ALREADY_REGISTERED = "Broadcast receivers already registered"
     const val LOG_MSG_CONTEXT_NULL_REGISTER = "Context is null, cannot register receivers"
     const val LOG_MSG_ERROR_REGISTERING_RECEIVER = "Error registering broadcast receivers: %s"
-    const val LOG_MSG_DISMISS_ACTIVITY_REF_NULL = "dismissReactActivity: myActivityReference is null"
+    const val LOG_MSG_DISMISS_ACTIVITY_REF_NULL = "dismissCheckoutActivity: myActivityReference is null"
     const val LOG_MSG_ERROR_FINISHING_ACTIVITY = "Error finishing activity: %s"
-    const val LOG_MSG_DISMISS_ACTIVITY_NULL = "dismissReactActivity: activity is null"
+    const val LOG_MSG_DISMISS_ACTIVITY_NULL = "dismissCheckoutActivity: activity is null"
     const val LOG_MSG_SET_ACTIVITY_REF_NULL = "setMyActivityWeakReference: activity is null"
     const val LOG_MSG_ENV_URL_NULL = "setEnvironmentUrl: apiUrl is null or empty"
     const val LOG_MSG_ENV_SET = "Environment set - API: %s, WebView: %s, Resp: %s"

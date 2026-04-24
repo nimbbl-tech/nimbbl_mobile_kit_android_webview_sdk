@@ -37,8 +37,7 @@ object PaymentURLBuilder {
      * @return Validated payment URL
      */
     fun buildPaymentURL(baseUrl: String, options: NimbblCheckoutOptions): String {
-        // Validate base URL
-        if (baseUrl.isNullOrEmpty()) {
+        if (baseUrl.isEmpty()) {
             SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Base URL is null or empty")
             throw IllegalArgumentException("Base URL cannot be null or empty")
         }
@@ -107,14 +106,12 @@ object PaymentURLBuilder {
      * @return URL with parameter appended
      */
     private fun appendParameter(url: String, key: String, value: String): String {
-        // Validate inputs
-        if (key.isNullOrEmpty()) {
-            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter key is null or empty")
+        if (key.isEmpty()) {
+            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter key is empty")
             return url
         }
-        
-        if (value.isNullOrEmpty()) {
-            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter value is null or empty for key: $key")
+        if (value.isEmpty()) {
+            SDKUtils.logWarning(TAG_PAYMENT_URL_BUILDER, "Parameter value is empty for key: $key")
             return url
         }
         
@@ -153,19 +150,28 @@ object PaymentURLBuilder {
         return try {
             val uri = currentUrl.toUri()
             val baseUri = baseUrl.toUri()
-            
-            return baseUri.buildUpon().apply {
-                uri.queryParameterNames.forEach { param ->
-                    appendQueryParameter(
-                        param, 
-                        if (param == BROWSER_BACK_PARAM) "true"
-                        else uri.getQueryParameter(param)
-                    )
+            // Start from base (scheme + host + path), then merge params:
+            // currentUrl params take precedence; base-only params are added if not overridden;
+            // BROWSER_BACK_PARAM is always set to "true".
+            val currentParams = uri.queryParameterNames
+            val builder = baseUri.buildUpon().clearQuery()
+            // Add base params not present in currentUrl
+            baseUri.queryParameterNames.forEach { param ->
+                if (param !in currentParams) {
+                    builder.appendQueryParameter(param, baseUri.getQueryParameter(param))
                 }
-                if (!uri.queryParameterNames.contains(BROWSER_BACK_PARAM)) {
-                    appendQueryParameter(BROWSER_BACK_PARAM, "true")
-                }
-            }.build().toString()
+            }
+            // Add all currentUrl params (BROWSER_BACK_PARAM forced to "true")
+            currentParams.forEach { param ->
+                builder.appendQueryParameter(
+                    param,
+                    if (param == BROWSER_BACK_PARAM) "true" else uri.getQueryParameter(param)
+                )
+            }
+            if (BROWSER_BACK_PARAM !in currentParams) {
+                builder.appendQueryParameter(BROWSER_BACK_PARAM, "true")
+            }
+            builder.build().toString()
         } catch (e: Exception) {
             SDKUtils.logError(TAG_PAYMENT_URL_BUILDER, "Error building browser back URL: ${e.message}", e)
             // Log exception event

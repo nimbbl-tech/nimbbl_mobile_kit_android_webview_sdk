@@ -4,37 +4,28 @@ package tech.nimbbl.webviewsdk.models
 import android.os.Bundle
 
 /**
- * This class represents user information to be passed to
+ * User information passed to Nimbbl Checkout.
  */
 class NimbblCheckoutUserInfo {
-    /**
-     * User's display name.
-     */
-    var displayName: String? = null
 
-    /**
-     * User's email address.
-     */
+    companion object {
+        private const val KEY_DISPLAY_NAME = "displayName"
+        private const val KEY_EMAIL = "email"
+    }
+
+    var displayName: String? = null
     var email: String? = null
 
-    constructor() {}
-    constructor(b: Bundle) : super() {
-        if (b.containsKey("displayName")) {
-            displayName = b.getString("displayName")
-        }
-        if (b.containsKey("email")) {
-            email = b.getString("email")
-        }
+    constructor()
+    constructor(b: Bundle) {
+        if (b.containsKey(KEY_DISPLAY_NAME)) displayName = b.getString(KEY_DISPLAY_NAME)
+        if (b.containsKey(KEY_EMAIL)) email = b.getString(KEY_EMAIL)
     }
 
     fun asBundle(): Bundle {
         val b = Bundle()
-        if (displayName != null) {
-            b.putString("displayName", displayName)
-        }
-        if (email != null) {
-            b.putString("email", email)
-        }
+        if (displayName != null) b.putString(KEY_DISPLAY_NAME, displayName)
+        if (email != null) b.putString(KEY_EMAIL, email)
         return b
     }
 }

@@ -7,9 +7,7 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 
 import android.content.Context
 import android.content.Intent
-import android.text.TextUtils
 import androidx.core.net.toUri
-import org.json.JSONException
 import org.json.JSONObject
 import tech.nimbbl.coreapisdk.core.constants.EventConstants
 import tech.nimbbl.coreapisdk.core.constants.EventConstants.EXCEPTION_THROWN
@@ -19,9 +17,7 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROADCAST_PAYMENT_RESUL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_UNKNOWN_ERROR
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_MESSAGE_UNKNOWN_ERROR
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_ORDER_ID
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_ORDER_TOKEN
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.EXTRA_PAYMENT_DATA
-import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_CALLBACK_URL
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_CONSUMER_MESSAGE
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_ERROR_CODE
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE
@@ -47,19 +43,14 @@ class PaymentHandler(private val context: Context) {
         subMerchantId: String,
     ) {
         try {
-
-            // Send success broadcast
             context.sendBroadcast(Intent(BROADCAST_PAYMENT_RESULT).apply {
                 setPackage(context.packageName)
                 putExtra(EXTRA_PAYMENT_DATA, payloadJObject)
                 putExtra(EXTRA_ORDER_ID, orderID)
-                putExtra(EXTRA_ORDER_TOKEN, orderToken)
             })
-
             SDKUtils.logDebug(TAG_PAYMENT_HANDLER, "Payment success handled for order: $orderID")
         } catch (e: Exception) {
             SDKUtils.logError(TAG_PAYMENT_HANDLER, "Error handling payment success: ${e.message}", e)
-            // Log exception event
             EventLoggingUtils.safeLogEvent(
                 context,
                 eventName = EXCEPTION_THROWN,
@@ -69,13 +60,6 @@ class PaymentHandler(private val context: Context) {
                 additionalData = mapOf("error" to (e.message ?: UNKNOWN_ERROR)),
                 sdkVersion = PaymentConstants.SDK_VERSION
             )
-            // Send success broadcast
-            context.sendBroadcast(Intent(BROADCAST_PAYMENT_RESULT).apply {
-                setPackage(context.packageName)
-                putExtra(EXTRA_PAYMENT_DATA, payloadJObject)
-                putExtra(EXTRA_ORDER_ID, orderID)
-                putExtra(EXTRA_ORDER_TOKEN, orderToken)
-            })
         }
     }
 
@@ -90,10 +74,10 @@ class PaymentHandler(private val context: Context) {
         orderToken: String,
         subMerchantId: String,
         errorStr: String,
-        isSendEvent:Boolean
+        isSendEvent: Boolean,
+        errorCode: String = ERROR_CODE_UNKNOWN_ERROR
     ) {
-        if(isSendEvent) {
-            // Log payment status failed event
+        if (isSendEvent) {
             EventLoggingUtils.safeLogEvent(
                 context,
                 eventName = EventConstants.PAYMENT_STATUS,
@@ -105,17 +89,15 @@ class PaymentHandler(private val context: Context) {
             )
         }
 
-        // Send failure broadcast (same extras as success for consistent host handling)
         val failurePayload = JSONObject().apply {
             put(JSON_KEY_NIMBBL_MERCHANT_MESSAGE, errorStr)
-            put(JSON_KEY_NIMBBL_ERROR_CODE, ERROR_CODE_UNKNOWN_ERROR)
+            put(JSON_KEY_NIMBBL_ERROR_CODE, errorCode)
             put(JSON_KEY_NIMBBL_CONSUMER_MESSAGE, ERROR_MESSAGE_UNKNOWN_ERROR)
         }.toString()
         context.sendBroadcast(Intent(BROADCAST_PAYMENT_RESULT).apply {
             setPackage(context.packageName)
             putExtra(EXTRA_PAYMENT_DATA, failurePayload)
             putExtra(EXTRA_ORDER_ID, orderID)
-            putExtra(EXTRA_ORDER_TOKEN, orderToken)
         })
 
         SDKUtils.logDebug(
@@ -145,38 +127,11 @@ class PaymentHandler(private val context: Context) {
 
         SDKUtils.logDebug(TAG_PAYMENT_HANDLER, "Processing callback URL: $url")
 
-        // Log redirect URL hit event
-        EventLoggingUtils.safeLogEvent(
-            context,
-            eventName = EventConstants.REDIRECT_URL_HIT,
-            orderId = orderID,
-            orderToken,
-            subMerchantId,
-            additionalData = mapOf(JSON_KEY_CALLBACK_URL to url),
-            sdkVersion = PaymentConstants.SDK_VERSION
-        )
-
         try {
             val queryParameter = url.toUri().getQueryParameter(RESPONSE_QUERY_PARAM)
-            if (!TextUtils.isEmpty(queryParameter)) {
-
-                try {
-                    handlePaymentSuccess(queryParameter!!, orderID, orderToken, subMerchantId)
-                    return true
-                } catch (e: JSONException) {
-                    SDKUtils.logError(TAG_PAYMENT_HANDLER, "JSON parsing error: ${e.message}", e)
-                    // Log exception event
-                    EventLoggingUtils.safeLogEvent(
-                        context,
-                        eventName = EXCEPTION_THROWN,
-                        orderId = orderID,
-                        orderToken,
-                        subMerchantId,
-                        additionalData = mapOf("error" to (e.message ?: UNKNOWN_ERROR)),
-                        sdkVersion = PaymentConstants.SDK_VERSION
-                    )
-                    return false
-                }
+            if (!queryParameter.isNullOrEmpty()) {
+                handlePaymentSuccess(queryParameter, orderID, orderToken, subMerchantId)
+                return true
             } else {
                 SDKUtils.logWarning(TAG_PAYMENT_HANDLER, "No response parameter found in callback URL")
                 // Log exception event

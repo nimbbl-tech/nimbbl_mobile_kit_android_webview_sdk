@@ -6,15 +6,18 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 */
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +27,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,215 +59,181 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var options: NimbblCheckoutOptions
-    private lateinit var transactionID: String
+    private var transactionID = ""
     private var orderID = ""
+    private var orderToken = ""
     private var subMerchantId = ""
     private var paymentUrl = ""
-    private var isActivityDestroyed = false
+    private var isShimmerActive = false
+    private val shimmerRunnables = mutableMapOf<View, Runnable>()
 
     // Manager classes
     private lateinit var webViewManager: WebViewManager
-    private lateinit var upiManager: UPIManager
     private lateinit var paymentHandler: PaymentHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_nimbbl_checkout_main)
-        
-        // Enable edge-to-edge drawing
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        val rootView = findViewById<android.widget.FrameLayout>(R.id.ll_main_activity)
+        val rootView = findViewById<FrameLayout>(R.id.ll_main_activity)
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, insets ->
             val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(
-                top = systemBarsInsets.top,
-                bottom = systemBarsInsets.bottom
-            )
+            view.updatePadding(top = systemBarsInsets.top, bottom = systemBarsInsets.bottom)
             WindowInsetsCompat.CONSUMED
         }
         webView = findViewById(R.id.webview)
-        
-        // Preload WebView for better performance
+
         preloadWebView()
-        
-        // Show loading state IMMEDIATELY to prevent white screen (after webView is initialized)
         showLoadingState()
-        
         applyStatusBarStyle(R.color.status_bar_color)
         applyNavigationBarStyle(R.color.navigation_bar_color)
-
-        // Initialize manager classes
         initializeManagers()
-
-        // Set up back navigation handler for all Android versions
         setupBackNavigation()
-
-        // Disable Android gesture back navigation (swipe from edge) after view is ready
         disableGestureBackNavigation()
 
         if (intent.hasExtra(PaymentConstants.EXTRA_TAG_OPTIONS)) {
-            options = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            options = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS, NimbblCheckoutOptions::class.java)
             } else {
                 @Suppress("DEPRECATION")
                 intent.getParcelableExtra(PaymentConstants.EXTRA_TAG_OPTIONS)
-            }!!
+            } ?: run {
+                hideLoadingState()
+                onFailedPayment(getString(R.string.input_sent_invalid), true)
+                return
+            }
+            val token = options.orderToken ?: run {
+                hideLoadingState()
+                onFailedPayment(getString(R.string.input_sent_invalid), true)
+                return
+            }
+            orderToken = token
             if (!isNetConnected(this)) {
                 hideLoadingState()
-                onFailedPayment(getString(R.string.no_internet),false)
+                onFailedPayment(getString(R.string.no_internet), false)
             } else {
-                orderID = parseJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
-                subMerchantId =
-                    getMerchantIDFromJwtToken(this@NimbblCheckoutMainActivity, options.orderToken!!)
+                try {
+                    orderID = parseJwtToken(this, orderToken)
+                    subMerchantId = getMerchantIDFromJwtToken(this, orderToken)
+                } catch (e: Exception) {
+                    SDKUtils.logError(TAG, "Failed to parse order token: ${e.message}", e)
+                    hideLoadingState()
+                    onFailedPayment(getString(R.string.input_sent_invalid), true)
+                    return
+                }
                 SDKUtils.logDebug(PaymentConstants.DEBUG_ORDER_ID_PREFIX, orderID)
-                updateOrder(options.orderToken!!, orderID)
+                updateOrder(orderToken, orderID)
             }
         } else {
             hideLoadingState()
-            // No options in intent: report failure without touching uninitialized options
             onFailedPayment(getString(R.string.input_sent_invalid), true)
         }
     }
 
-    // Apply status bar background + icon color
-    fun Activity.applyStatusBarStyle(colorResId: Int) {
+    private fun applyStatusBarStyle(colorResId: Int) {
         val color = ContextCompat.getColor(this, colorResId)
         window.statusBarColor = color
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = isUsingLightTheme()
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = isUsingLightTheme()
     }
 
-    // Apply navigation bar background + icon color
-    fun Activity.applyNavigationBarStyle(colorResId: Int) {
+    private fun applyNavigationBarStyle(colorResId: Int) {
         val color = ContextCompat.getColor(this, colorResId)
         window.navigationBarColor = color
-
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightNavigationBars = isUsingLightTheme()
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = isUsingLightTheme()
     }
 
-    // Check if current theme is light
-    fun Context.isUsingLightTheme(): Boolean {
+    private fun isUsingLightTheme(): Boolean {
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         return nightMode != Configuration.UI_MODE_NIGHT_YES
     }
 
-    /**
-     * Set up back navigation handler for all Android versions
-     * Uses OnBackPressedDispatcher which works on all Android API levels
-     */
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Handle back button press - inject JS to handle back in WebView
                 insertJSToWebview(true)
             }
         })
         SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Back navigation handler set up via OnBackPressedDispatcher")
     }
 
-    /**
-     * Disable Android gesture back navigation (swipe from edge)
-     * This method is called after the view is properly initialized
-     * Note: System gesture exclusion is only available on Android Q (API 29)+
-     * For older devices, back navigation is already handled via OnBackPressedDispatcher in setupBackNavigation()
-     */
     private fun disableGestureBackNavigation() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 window.systemGestureExclusionRects = listOf(
-                    android.graphics.Rect(0, 0, 100, resources.displayMetrics.heightPixels)
+                    Rect(0, 0, 100, resources.displayMetrics.heightPixels)
                 )
                 SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Android gesture back navigation disabled")
             } catch (e: Exception) {
                 SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Failed to disable gesture back navigation: ${e.message}")
             }
         } else {
-            // On older Android versions, gesture navigation isn't a system feature
-            // Back navigation is already handled via OnBackPressedDispatcher in setupBackNavigation()
             SDKUtils.logDebug(PaymentConstants.TAG_MAIN_ACTIVITY, "Gesture exclusion not needed on Android < Q (back handled via OnBackPressedDispatcher)")
         }
     }
 
-    /**
-     * Preload WebView for better performance
-     */
+    @SuppressLint("SetJavaScriptEnabled")
     private fun preloadWebView() {
         try {
-            // Enable hardware acceleration for better performance
-            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-            
-            // Preload WebView with optimized settings for faster initialization
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             webView.settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                setRenderPriority(android.webkit.WebSettings.RenderPriority.HIGH)
                 setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
-                
-                // Additional preload optimizations
                 setLoadWithOverviewMode(true)
                 setUseWideViewPort(true)
                 setBuiltInZoomControls(false)
                 setDisplayZoomControls(false)
-                
-                // Memory optimizations
                 setMinimumFontSize(8)
                 setMinimumLogicalFontSize(8)
                 setTextZoom(100)
-                
-                // Layout optimizations
-                setLayoutAlgorithm(android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING)
             }
-            
-            // Load a minimal HTML page to initialize the WebView engine faster
+            webView.settings.apply {
+                allowFileAccess = false
+                allowContentAccess = false
+                @Suppress("DEPRECATION") setAllowFileAccessFromFileURLs(false)
+                @Suppress("DEPRECATION") setAllowUniversalAccessFromFileURLs(false)
+                setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    safeBrowsingEnabled = true
+                }
+            }
             val minimalHtml = """
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                        body { margin: 0; padding: 0; background: white; }
-                    </style>
+                    <style>body { margin: 0; padding: 0; background: white; }</style>
                 </head>
                 <body></body>
                 </html>
             """.trimIndent()
-            
             webView.loadDataWithBaseURL(null, minimalHtml, "text/html", "utf-8", null)
-            
         } catch (e: Exception) {
             SDKUtils.logError(PaymentConstants.TAG_MAIN_ACTIVITY, "Error preloading WebView: ${e.message}", e)
         }
     }
 
     private fun initializeManagers() {
-        webViewManager = WebViewManager(this, webView)
-        upiManager = UPIManager(this)
-        paymentHandler = PaymentHandler(this)
-        
-        // Set callback for when WebView finishes loading
+        paymentHandler = PaymentHandler(applicationContext)
+        webViewManager = WebViewManager(applicationContext, webView, paymentHandler)
+
         webViewManager.setOnPageFinishedCallback {
             runOnUiThread {
-                // Reduced delay for faster response - WebView is preloaded
-                webView.postDelayed({
-                    hideLoadingState()
-                }, 50) // 50ms delay for content painting (reduced from 100ms)
+                if (!isFinishing && !isDestroyed) {
+                    webView.postDelayed({
+                        if (!isFinishing && !isDestroyed) hideLoadingState()
+                    }, 50)
+                }
             }
         }
-        
-        // Additional performance optimization: Warm up the WebView
+
         warmUpWebView()
     }
-    
-    /**
-     * Warm up WebView for optimal performance
-     */
+
     private fun warmUpWebView() {
         try {
-            // Force WebView to initialize its rendering engine
             webView.post {
-                // This helps initialize the WebView's internal components
                 webView.evaluateJavascript("console.log('WebView warmed up');", null)
             }
         } catch (e: Exception) {
@@ -273,8 +242,8 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     }
 
     private fun updateOrder(token: String, orderId: String) {
+        NimbblCheckoutSDK.getInstance().setMyActivityWeakReference(this)
         try {
-            // Log update order payload event
             EventLoggingUtils.safeLogEvent(
                 context = this,
                 eventName = EventConstants.UPDATE_ORDER_PAYLOAD,
@@ -288,84 +257,67 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 sdkVersion = PaymentConstants.SDK_VERSION
             )
 
-            CoroutineScope(Dispatchers.Main).launch {
-                val result = withContext(Dispatchers.IO) {
-                    NimbblCoreApiSDK.getInstance()
-                        ?.updateOrder(
-                            token,
-                            orderId,
-                            PaymentConstants.CALLBACK_MODE_MOBILE,
-                            PaymentConstants.PLATFORM_TYPE_ANDROID
-                        )
-                }
-                if (result != null && result.isSuccessful) {
-                    setupWebView()
-                } else {
-                    if (result != null && !result.rawBody.isNullOrEmpty()) {
-                        try {
-                            val jObjError = JSONObject(result.rawBody!!)
-                            if (jObjError.has(PaymentConstants.JSON_KEY_ERROR)) {
-                                val errorObj = jObjError.getJSONObject(PaymentConstants.JSON_KEY_ERROR)
-                                onFailedPayment(
-                                    errorObj.getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE),
-                                    true
-                                )
-                            } else {
-                                onFailedPayment(getString(R.string.error_in_update_order), true)
-                            }
-                        } catch (e: Exception) {
-                            onFailedPayment(getString(R.string.error_in_update_order), true)
-                        }
-                    } else {
-                        onFailedPayment(getString(R.string.error_in_update_order), true)
+            lifecycleScope.launch {
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        NimbblCoreApiSDK.getInstance()
+                            .updateOrder(token, orderId, PaymentConstants.CALLBACK_MODE_MOBILE, PaymentConstants.PLATFORM_TYPE_ANDROID)
                     }
+                    if (result != null && result.isSuccessful) {
+                        setupWebView()
+                    } else {
+                        onFailedPayment(parseUpdateOrderError(result?.rawBody), true)
+                    }
+                } catch (e: Exception) {
+                    SDKUtils.logError(TAG, "updateOrder failed: ${e.message}", e)
+                    onFailedPayment(e.message ?: getString(R.string.error_in_update_order), true)
                 }
             }
         } catch (e: Exception) {
-            onFailedPayment(e.toString(), true)
+            onFailedPayment(e.message ?: getString(R.string.error_in_update_order), true)
         }
-        NimbblCheckoutSDK.getInstance().setMyActivityWeakReference(this)
+    }
+
+    private fun parseUpdateOrderError(rawBody: String?): String {
+        if (rawBody.isNullOrEmpty()) return getString(R.string.error_in_update_order)
+        return try {
+            val error = JSONObject(rawBody).optJSONObject(PaymentConstants.JSON_KEY_ERROR)
+            error?.getString(PaymentConstants.JSON_KEY_NIMBBL_MERCHANT_MESSAGE)
+                ?: getString(R.string.error_in_update_order)
+        } catch (_: Exception) {
+            getString(R.string.error_in_update_order)
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
-        // Build payment URL using the URL builder
-        val baseUrl = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, options.orderToken)
-        paymentUrl = PaymentURLBuilder.buildPaymentURL(baseUrl, options)
-
-        // Setup WebView using the manager
-        webViewManager.setupWebView(paymentUrl, orderID, options.orderToken!!, subMerchantId)
-
-        // Add JavaScript interface directly to ensure proper annotations
-        webView.addJavascriptInterface(
-            INimmbleWebViewInterface(this),
-            PaymentConstants.JAVASCRIPT_INTERFACE_NAME
-        )
-        
-        // Don't hide loading state here - wait for WebView to actually finish loading
-        // The loading state will be hidden in onPageFinished callback
+        try {
+            val baseUrl = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, orderToken)
+            paymentUrl = PaymentURLBuilder.buildPaymentURL(baseUrl, options)
+        } catch (e: IllegalArgumentException) {
+            SDKUtils.logError(TAG, "Invalid payment URL: ${e.message}", e)
+            onFailedPayment(e.message ?: getString(R.string.input_sent_invalid), true)
+            return
+        }
+        webViewManager.setupWebView(paymentUrl, orderID, orderToken, subMerchantId)
+        webView.addJavascriptInterface(INimmbleWebViewInterface(this), PaymentConstants.JAVASCRIPT_INTERFACE_NAME)
     }
 
-    inner class INimmbleWebViewInterface(private val mContext: Context) {
+    private inner class INimmbleWebViewInterface(private val mContext: Context) {
 
+        @Suppress("unused")
         @JavascriptInterface
         fun openUpiIntent(parameters: String) {
-            SDKUtils.logDebug(PaymentConstants.TAG_SAN, "openUpiIntent-->$parameters")
+            SDKUtils.logDebug(TAG, "openUpiIntent-->$parameters")
 
             runOnUiThread {
                 try {
-                    // Check if activity is destroyed before proceeding
-                    if (isActivityDestroyed()) {
-                        SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Activity is destroyed, ignoring UPI intent")
+                    if (isFinishing || isDestroyed) {
+                        SDKUtils.logWarning(TAG, "Activity is destroyed, ignoring UPI intent")
                         return@runOnUiThread
                     }
 
-                    // Validate UPI parameters (single validation call)
-                    if (!upiManager.validateUPIParameters(
-                            parameters, orderID,
-                            options.orderToken.toString(), subMerchantId
-                        )
-                    ) {
+                    if (!UPIManager(this@NimbblCheckoutMainActivity).validateUPIParameters(parameters, orderID, options.orderToken.toString(), subMerchantId)) {
                         SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "Invalid UPI parameters received")
                         insertJSToWebview(false)
                         return@runOnUiThread
@@ -376,7 +328,6 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     val packageName = responseObj.getString(PaymentConstants.UPI_PARAM_PACKAGE_NAME)
                     transactionID = responseObj.getString(PaymentConstants.UPI_PARAM_TRANSACTION_ID)
 
-                    // Log UPI intent started event
                     EventLoggingUtils.safeLogEvent(
                         mContext,
                         eventName = EventConstants.UPI_INTENT_STARTED,
@@ -395,20 +346,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                     intent.data = Uri.parse(url)
                     intent.setPackage(packageName)
 
-                    // Add intent resolution check
                     if (intent.resolveActivity(packageManager) != null) {
                         resultLauncher.launch(intent)
                     } else {
                         SDKUtils.logWarning(PaymentConstants.TAG_MAIN_ACTIVITY, "No app found to handle UPI intent for package: $packageName")
-                        Toast.makeText(
-                            this@NimbblCheckoutMainActivity,
-                            "No UPI app found to handle this request",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@NimbblCheckoutMainActivity, PaymentConstants.ERROR_NO_UPI_APP_FOUND, Toast.LENGTH_SHORT).show()
                         insertJSToWebview(false)
                     }
                 } catch (e: Exception) {
-                    // Log exception event
                     EventLoggingUtils.safeLogEvent(
                         mContext,
                         eventName = EventConstants.EXCEPTION_THROWN,
@@ -422,30 +367,19 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                         ),
                         sdkVersion = PaymentConstants.SDK_VERSION
                     )
-
-                    Toast.makeText(
-                        this@NimbblCheckoutMainActivity,
-                        PaymentConstants.ERROR_UNABLE_TO_LAUNCH_UPI,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(this@NimbblCheckoutMainActivity, PaymentConstants.ERROR_UNABLE_TO_LAUNCH_UPI, Toast.LENGTH_SHORT).show()
                     insertJSToWebview(false)
                 }
             }
         }
     }
 
-
     private fun insertJSToWebview(isDeviceBackPressed: Boolean) {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
-                if (isDeviceBackPressed) {
-                    handleDeviceBackPressed()
-                } else {
-                    handleUpiIntentBack()
-                }
+                if (isDeviceBackPressed) handleDeviceBackPressed() else handleUpiIntentBack()
             } catch (e: Exception) {
                 SDKUtils.logError(PaymentConstants.TAG_BACK_HANDLER, "Error handling back press: ${e.message}", e)
-                // Log exception event
                 EventLoggingUtils.safeLogEvent(
                     context = this@NimbblCheckoutMainActivity,
                     eventName = EventConstants.EXCEPTION_THROWN,
@@ -463,6 +397,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     }
 
     private fun handleDeviceBackPressed() {
+        if (paymentUrl.isEmpty()) return
         val currentUrl = webViewManager.getCurrentUrl()
 
         SDKUtils.logDebug(PaymentConstants.TAG_BACK_HANDLER, "currentUrl: $currentUrl")
@@ -470,24 +405,20 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
         if (!currentUrl.isNullOrEmpty()) {
             val uri = currentUrl.toUri()
-            val baseUrl = "${uri.scheme}://${uri.authority}"
+            val scheme = uri.scheme
+            val authority = uri.authority
+            if (scheme != null && authority != null) {
+                val baseUrl = "$scheme://$authority"
+                SDKUtils.logDebug(PaymentConstants.DEBUG_BASE_URL_PREFIX, baseUrl)
 
-            SDKUtils.logDebug(PaymentConstants.DEBUG_BASE_URL_PREFIX, baseUrl)
+                val expectedBase = paymentUrl.toUri().buildUpon().path("").encodedQuery(null).fragment(null).build().toString()
 
-            val expectedBase =
-                paymentUrl.toUri().buildUpon().path("").encodedQuery(null).fragment(null).build()
-                    .toString()
-
-            if (!baseUrl.startsWith(expectedBase)) {
-                val updatedUrl = PaymentURLBuilder.buildBrowserBackURL(
-                    this@NimbblCheckoutMainActivity,
-                    paymentUrl,
-                    currentUrl,
-                    orderID,
-                    options.orderToken,
-                    subMerchantId
-                )
-                webViewManager.loadUrl(updatedUrl, orderID, options.orderToken, subMerchantId)
+                if (!baseUrl.startsWith(expectedBase)) {
+                    val updatedUrl = PaymentURLBuilder.buildBrowserBackURL(
+                        this, paymentUrl, currentUrl, orderID, options.orderToken, subMerchantId
+                    )
+                    webViewManager.loadUrl(updatedUrl, orderID, options.orderToken, subMerchantId)
+                }
             }
         }
 
@@ -496,7 +427,6 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             put(PayloadKeys.key_source, PaymentConstants.SDK_SOURCE_ANDROID)
         }
 
-        // Log back button pressed event
         EventLoggingUtils.safeLogEvent(
             context = this,
             eventName = EventConstants.BACK_BUTTON_PRESSED,
@@ -508,100 +438,62 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         )
 
         val jsString = JSONObject.quote(jsonObject.toString())
-        webViewManager.evaluateJavaScript("${PaymentConstants.JS_FUNCTION_POST_MESSAGE}($jsString, '*');")
+        val checkoutOrigin = runCatching { paymentUrl.toUri().run { "$scheme://$host" } }.getOrElse { "*" }
+        webViewManager.evaluateJavaScript("${PaymentConstants.JS_FUNCTION_POST_MESSAGE}($jsString, '$checkoutOrigin');")
     }
 
     private suspend fun handleUpiIntentBack() {
         val paymentEnquiryResponse = withContext(Dispatchers.IO) {
-            NimbblCoreApiSDK.getInstance()?.getTransactionEnquiry(
-                options.orderToken!!,
-                orderID,
-                orderID,
-                transactionID
-            )
+            NimbblCoreApiSDK.getInstance().getTransactionEnquiry(orderToken, orderID, "", transactionID)
         }
 
         val jsonObject = JSONObject().apply {
-            put(
-                PayloadKeys.key_upi_intent_back_response,
-                PaymentConstants.UPI_INTENT_BACK_RESPONSE_CLOSE
-            )
+            put(PayloadKeys.key_upi_intent_back_response, PaymentConstants.UPI_INTENT_BACK_RESPONSE_CLOSE)
             val status = if (paymentEnquiryResponse?.isSuccessful == true) {
                 paymentEnquiryResponse.data?.order?.status ?: ""
-            } else {
-                ""
-            }
+            } else ""
             put(PayloadKeys.key_transaction_enquiry_api_response, status)
         }
 
         val jsString = JSONObject.quote(jsonObject.toString())
-        webViewManager.evaluateJavaScript("${PaymentConstants.JS_FUNCTION_POST_MESSAGE}($jsString, '*');")
+        val checkoutOrigin = runCatching { paymentUrl.toUri().run { "$scheme://$host" } }.getOrElse { "*" }
+        webViewManager.evaluateJavaScript("${PaymentConstants.JS_FUNCTION_POST_MESSAGE}($jsString, '$checkoutOrigin');")
     }
 
+    private val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        SDKUtils.logDebug(TAG, "resultCode-->" + result.resultCode + "data-->" + result.data)
 
-    var resultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            SDKUtils.logDebug(PaymentConstants.TAG_SAN, "resultCode-->" + result.resultCode + "data-->" + result.data)
-
-            // Log UPI intent closed event
-            EventLoggingUtils.safeLogEvent(
-                context = this,
-                eventName = EventConstants.UPI_INTENT_CLOSED,
-                orderId = orderID,
-                options.orderToken,
-                subMerchantId,
-                additionalData = mapOf<String, Any>(
-                    "result_code" to result.resultCode.toString(),
-                    "result_data" to (result.data?.toString() ?: "null"),
-                    "transactionId" to transactionID
-                ),
-                sdkVersion = PaymentConstants.SDK_VERSION
-            )
-            insertJSToWebview(false)
-        }
-
-    // UPI intents are now handled by WebViewManager
-    // They are automatically sent only once when the initial page loads
-    // Use webViewManager.triggerUpiIntents() if manual triggering is needed
-
-    // WebView client is now handled by WebViewManager
-    // Payment handling is now handled by PaymentHandler
-
-    private fun onFailedPayment(errorStr: String,isSendEvent:Boolean) {
-        paymentHandler.handlePaymentFailure(
-            orderID,
-            options.orderToken!!,
-            subMerchantId = subMerchantId,
-            errorStr,
-            isSendEvent
+        EventLoggingUtils.safeLogEvent(
+            context = this,
+            eventName = EventConstants.UPI_INTENT_CLOSED,
+            orderId = orderID,
+            options.orderToken,
+            subMerchantId,
+            additionalData = mapOf<String, Any>(
+                "result_code" to result.resultCode.toString(),
+                "result_data" to (result.data?.toString() ?: "null"),
+                "transactionId" to transactionID
+            ),
+            sdkVersion = PaymentConstants.SDK_VERSION
         )
+        insertJSToWebview(false)
     }
 
-
-    override fun onResume() {
-        super.onResume()
-    }
-
-    /**
-     * Check if activity is destroyed
-     * @return true if activity is destroyed, false otherwise
-     */
-    private fun isActivityDestroyed(): Boolean {
-        return isActivityDestroyed || isFinishing || isDestroyed
+    private fun onFailedPayment(errorStr: String, isSendEvent: Boolean) {
+        if (!::paymentHandler.isInitialized) return
+        paymentHandler.handlePaymentFailure(orderID, orderToken, subMerchantId = subMerchantId, errorStr, isSendEvent)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isActivityDestroyed = true
-
-        // Clean up WebView resources
+        isShimmerActive = false
+        shimmerRunnables.forEach { (view, runnable) -> view.removeCallbacks(runnable) }
+        shimmerRunnables.clear()
         try {
             webViewManager.destroy()
         } catch (e: Exception) {
             SDKUtils.logError(TAG, "Error destroying WebView manager: ${e.message}", e)
         }
-
-        // Clean up SDK resources
         try {
             NimbblCheckoutSDK.getInstance().cleanup()
         } catch (e: Exception) {
@@ -609,111 +501,72 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         }
     }
 
-    // Bitmap conversion is now handled by UPIManager
-
-    /**
-     * Show loading state immediately to prevent white screen
-     */
     private fun showLoadingState() {
         try {
-            // Find shimmer view
-            val shimmerView = findViewById<android.view.View>(R.id.shimmer_layout)
-            
-            // Show shimmer layout
-            shimmerView?.visibility = android.view.View.VISIBLE
-            
-            // Hide WebView initially
-            webView.visibility = android.view.View.GONE
-            
-            // Start shimmer animation
+            val shimmerView = findViewById<View>(R.id.shimmer_layout)
+            shimmerView?.visibility = View.VISIBLE
+            webView.visibility = View.GONE
             if (shimmerView != null) {
+                isShimmerActive = true
                 startShimmerAnimation(shimmerView)
             }
-            
             SDKUtils.logDebug(TAG, "Shimmer loading state shown")
         } catch (e: Exception) {
             SDKUtils.logError(TAG, "Error showing loading state: ${e.message}", e)
         }
     }
 
-    /**
-     * Hide loading state when WebView is ready
-     */
     private fun hideLoadingState() {
         try {
-            // Find shimmer view
-            val shimmerView = findViewById<android.view.View>(R.id.shimmer_layout)
-            
-            // Stop shimmer animation
-            if (shimmerView != null) {
-                shimmerView.clearAnimation()
-            }
-            
-            // Hide shimmer with smooth transition
+            val shimmerView = findViewById<View>(R.id.shimmer_layout)
+            isShimmerActive = false
+            shimmerRunnables.forEach { (view, runnable) -> view.removeCallbacks(runnable) }
+            shimmerRunnables.clear()
+            shimmerView?.clearAnimation()
             shimmerView?.animate()?.alpha(0f)?.setDuration(300)?.withEndAction {
-                shimmerView.visibility = android.view.View.GONE
+                shimmerView.visibility = View.GONE
                 showWebView()
             }
-            
             SDKUtils.logDebug(TAG, "Shimmer loading state hidden")
         } catch (e: Exception) {
             SDKUtils.logError(TAG, "Error hiding loading state: ${e.message}", e)
-            // Fallback: just show WebView
             showWebView()
         }
     }
 
-    /**
-     * Show WebView with smooth transition
-     */
     private fun showWebView() {
         try {
-            webView.visibility = android.view.View.VISIBLE
+            webView.visibility = View.VISIBLE
             webView.alpha = 0f
-            webView.animate()
-                .alpha(1f)
-                .setDuration(300)
-                .start()
-                
+            webView.animate().alpha(1f).setDuration(300).start()
             SDKUtils.logDebug(TAG, "WebView shown with animation")
         } catch (e: Exception) {
             SDKUtils.logError(TAG, "Error showing WebView: ${e.message}", e)
-            webView.visibility = android.view.View.VISIBLE
+            webView.visibility = View.VISIBLE
         }
     }
 
-    /**
-     * Start shimmer animation for loading effect
-     */
-    private fun startShimmerAnimation(view: android.view.View) {
+    private fun startShimmerAnimation(view: View) {
         try {
-            // Find all shimmer placeholder views and animate them individually
-            val shimmerViews = mutableListOf<android.view.View>()
+            val shimmerViews = mutableListOf<View>()
             findShimmerViews(view, shimmerViews)
-            
-            // Animate each shimmer view with a slight delay for wave effect
             shimmerViews.forEachIndexed { index, shimmerView ->
-                val delay = index * 100L // 100ms delay between each item
-                shimmerView.postDelayed({
-                    animateShimmerItem(shimmerView)
-                }, delay)
+                val delay = index * 100L
+                val staggerRunnable = Runnable { if (isShimmerActive) animateShimmerItem(shimmerView) }
+                shimmerRunnables[shimmerView] = staggerRunnable
+                shimmerView.postDelayed(staggerRunnable, delay)
             }
-            
             SDKUtils.logDebug(TAG, "Shimmer animation started for ${shimmerViews.size} items")
         } catch (e: Exception) {
             SDKUtils.logError(TAG, "Error starting shimmer animation: ${e.message}", e)
         }
     }
 
-    /**
-     * Recursively find all shimmer placeholder views
-     */
-    private fun findShimmerViews(parent: android.view.View, shimmerViews: MutableList<android.view.View>) {
-        if (parent is android.view.ViewGroup) {
+    private fun findShimmerViews(parent: View, shimmerViews: MutableList<View>) {
+        if (parent is ViewGroup) {
             for (i in 0 until parent.childCount) {
                 val child = parent.getChildAt(i)
                 if (child.background != null && child.background.constantState != null) {
-                    // Check if this is a shimmer placeholder (has gray background)
                     shimmerViews.add(child)
                 }
                 findShimmerViews(child, shimmerViews)
@@ -721,36 +574,32 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Animate individual shimmer item
-     */
-    private fun animateShimmerItem(view: android.view.View) {
-        if (view.visibility == android.view.View.VISIBLE) {
-            val shimmerRunnable = object : Runnable {
-                override fun run() {
-                    if (view.visibility == android.view.View.VISIBLE) {
+    private fun animateShimmerItem(view: View) {
+        if (view.visibility != View.VISIBLE) return
+        @Suppress("ObjectLiteralToLambda") // self-reference via `this` inside postDelayed requires object form
+        val shimmerRunnable = object : Runnable {
+            override fun run() {
+                if (!isShimmerActive || view.visibility != View.VISIBLE) return
+                view.animate()
+                    .alpha(0.3f)
+                    .setDuration(1200)
+                    .withEndAction {
+                        if (!isShimmerActive || view.visibility != View.VISIBLE) return@withEndAction
                         view.animate()
-                            .alpha(0.3f)
+                            .alpha(0.8f)
                             .setDuration(1200)
                             .withEndAction {
-                                if (view.visibility == android.view.View.VISIBLE) {
-                                    view.animate()
-                                        .alpha(0.8f)
-                                        .setDuration(1200)
-                                        .withEndAction {
-                                            if (view.visibility == android.view.View.VISIBLE) {
-                                                view.postDelayed(this, 200) // Small delay before next cycle
-                                            }
-                                        }
-                                        .start()
+                                if (isShimmerActive && view.visibility == View.VISIBLE) {
+                                    view.postDelayed(this, 200)
                                 }
                             }
                             .start()
                     }
-                }
+                    .start()
             }
-            view.post(shimmerRunnable)
         }
+        shimmerRunnables[view] = shimmerRunnable
+        view.post(shimmerRunnable)
     }
 
 }
