@@ -85,6 +85,14 @@ class NimbblCheckoutOptions : Parcelable {
     var upiAppCode: String? = null
         private set
 
+    /**
+     * Optional surface override for referrer_platform. When null (the default), the SDK reports
+     * its own platform (android/ios). Wrapping SDKs that host this webview under a different
+     * surface (e.g. react-native) set this so the order is attributed to that surface instead.
+     */
+    var referrerPlatform: String? = null
+        private set
+
 
     /**
      * Class used to build the immutable [NimbblCheckoutOptions] object.
@@ -105,6 +113,7 @@ class NimbblCheckoutOptions : Parcelable {
         private var paymentFlow: String? = null
         private var upiId: String? = null
         private var upiAppCode: String? = null
+        private var referrerPlatform: String? = null
 
         /**\
          * Sets the server URL.
@@ -214,6 +223,11 @@ class NimbblCheckoutOptions : Parcelable {
             return this
         }
 
+        fun setReferrerPlatform(surface: String?): Builder {
+            referrerPlatform = surface
+            return this
+        }
+
         /**
          * Builds the immutable [NimbblCheckoutOptions] object with the configuration
          * that this [Builder] instance specified.
@@ -236,6 +250,7 @@ class NimbblCheckoutOptions : Parcelable {
             options.paymentFlow = paymentFlow
             options.upiId = upiId
             options.upiAppCode = upiAppCode
+            options.referrerPlatform = referrerPlatform
             return options
         }
     }
@@ -257,6 +272,7 @@ class NimbblCheckoutOptions : Parcelable {
         paymentFlow = `in`.readString()
         upiId = `in`.readString()
         upiAppCode = `in`.readString()
+        referrerPlatform = `in`.readString()
     }
 
 
@@ -276,6 +292,7 @@ class NimbblCheckoutOptions : Parcelable {
         dest.writeString(paymentFlow)
         dest.writeString(upiId)
         dest.writeString(upiAppCode)
+        dest.writeString(referrerPlatform)
     }
 
     override fun describeContents(): Int {

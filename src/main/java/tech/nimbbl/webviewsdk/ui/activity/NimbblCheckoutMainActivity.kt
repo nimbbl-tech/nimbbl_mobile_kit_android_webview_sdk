@@ -274,6 +274,8 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     private fun updateOrder(token: String, orderId: String) {
         try {
+            // A hosting SDK (e.g. react-native) can override the surface; otherwise this is android.
+            val referrerPlatform = options.referrerPlatform ?: PaymentConstants.PLATFORM_TYPE_ANDROID
             // Log update order payload event
             EventLoggingUtils.safeLogEvent(
                 context = this,
@@ -283,7 +285,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 subMerchantId,
                 additionalData = mapOf<String, Any>(
                     "callback_mode" to PaymentConstants.CALLBACK_MODE_MOBILE,
-                    "platform_type" to PaymentConstants.PLATFORM_TYPE_ANDROID
+                    "platform_type" to referrerPlatform
                 ),
                 sdkVersion = PaymentConstants.SDK_VERSION
             )
@@ -295,7 +297,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                             token,
                             orderId,
                             PaymentConstants.CALLBACK_MODE_MOBILE,
-                            PaymentConstants.PLATFORM_TYPE_ANDROID
+                            referrerPlatform
                         )
                 }
                 if (result != null && result.isSuccessful) {
