@@ -187,6 +187,8 @@ object PaymentConstants {
     // Update order / callback constants
     const val CALLBACK_MODE_MOBILE = "callback_mobile"
     const val PLATFORM_TYPE_ANDROID = "android"
+    // Surface value a hosting SDK passes via NimbblCheckoutOptions.referrerPlatform.
+    const val PLATFORM_TYPE_REACT_NATIVE = "react-native"
 
     // UPI intent parameter keys (from WebView JS)
     const val UPI_PARAM_URL = "url"
