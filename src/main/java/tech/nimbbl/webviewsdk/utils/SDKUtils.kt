@@ -7,7 +7,8 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 
 import android.content.Context
 import android.util.Log
-import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
+import tech.nimbbl.coreapi.NimbblCoreApi
+import tech.nimbbl.coreapi.events.NimbblEvent
 import tech.nimbbl.webviewsdk.BuildConfig
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.APP_VERSION_KEY
@@ -199,16 +200,15 @@ object SDKUtils {
     ) {
         try {
             context?.let {
-                NimbblCoreApiSDK.getInstance()?.logEvent(
-                    it,
-                    eventName,
-                    orderId,
-                    token,
-                    subMerchantId,
-                    additionalData,
-                    customUserAgent = null, // customUserAgent
-                    customDeviceInfo = null, // customDeviceInfo
-                    customAppInfo = mapOf(APP_VERSION_KEY to PaymentConstants.SDK_VERSION)
+                NimbblCoreApi.logEvent(
+                    NimbblEvent(
+                        name = eventName,
+                        orderId = orderId,
+                        token = token,
+                        subMerchantId = subMerchantId,
+                        additionalData = additionalData,
+                        customAppInfo = mapOf(APP_VERSION_KEY to PaymentConstants.SDK_VERSION)
+                    )
                 )
             }
         } catch (e: Exception) {

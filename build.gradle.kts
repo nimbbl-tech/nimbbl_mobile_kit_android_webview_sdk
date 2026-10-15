@@ -1,4 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 // Load .env into project properties (so findProperty works). .env is gitignored.
@@ -31,23 +32,13 @@ if (versionPropertiesFile.exists()) {
 
 plugins {
     id("com.android.library")
-    kotlin("android") version "1.9.0"
+    kotlin("android")
     id("maven-publish")
     id("signing")
 }
 
-fun useLocalCoreSdk(): Boolean {
-    val prop = findProperty("USE_LOCAL_CORE_SDK") as String?
-    val env = System.getenv("USE_LOCAL_CORE_SDK")
-    return when {
-        prop != null -> prop.equals("true", ignoreCase = true)
-        env != null -> env.equals("true", ignoreCase = true)
-        else -> true
-    }
-}
-
 // Dependency versions - aligned with Core API SDK (from version.properties when present)
-val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "4.0.13")
+val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "0.1.0-alpha.1")
 val coreKtxVersion = "1.12.0"
 val appCompatVersion = "1.6.1"
 val materialVersion = "1.12.0"
@@ -93,17 +84,26 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
-    kotlinOptions {
-        jvmTarget = "17"
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
 
 tasks.register("nimbbl_webviewsdk_prepareKotlinBuildScriptModel") {}
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
+// AGP 8.11 + Gradle 8.14 with enableUnitTestCoverage: AGP derives JaCoCo's destination file from
+// the test task's own output provider, which Gradle rejects before the task runs. Pin it to the
+// same path AGP's coverage report reads from.
+afterEvaluate {
+    tasks.withType<Test>().configureEach {
+        val execFile = layout.buildDirectory.file("outputs/unit_test_code_coverage/${name.removePrefix("test")
+            .replaceFirstChar { it.lowercase() }}/$name.exec")
+        extensions.findByType(JacocoTaskExtension::class.java)?.setDestinationFile(execFile.get().asFile)
+    }
 }
 
 dependencies {
@@ -116,11 +116,9 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:$junitExtVersion")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion")
 
-    if (useLocalCoreSdk()) {
-        implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-    } else {
-        implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
-    }
+    // KMP Core API SDK. With USE_LOCAL_CORE_SDK (default) settings.gradle.kts includes the sibling
+    // build and this coordinate resolves to its :core-api project; otherwise it comes from Maven.
+    implementation("tech.nimbbl:core-api:$coreApiSdkVersion")
 }
 
 // Maven Central coordinates (tech.nimbbl namespace)

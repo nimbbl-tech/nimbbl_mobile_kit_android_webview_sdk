@@ -9,9 +9,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.net.toUri
 import org.json.JSONObject
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.core.constants.EventConstants.EXCEPTION_THROWN
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.coreapi.events.EventConstants
+import tech.nimbbl.coreapi.events.EventConstants.EXCEPTION_THROWN
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROADCAST_PAYMENT_RESULT
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_UNKNOWN_ERROR

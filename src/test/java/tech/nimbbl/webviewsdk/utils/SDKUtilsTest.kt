@@ -74,7 +74,7 @@ class SDKUtilsTest {
 
     @Test
     fun logEventWithVersion_nullContext_doesNotCrash() {
-        // Must short-circuit before touching NimbblCoreApiSDK.
+        // Must short-circuit before touching NimbblCoreApi.
         SDKUtils.logEventWithVersion(null, "test_event")
     }
 }

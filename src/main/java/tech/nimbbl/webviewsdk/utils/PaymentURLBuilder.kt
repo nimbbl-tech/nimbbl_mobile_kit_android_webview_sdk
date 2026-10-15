@@ -8,8 +8,7 @@ Copyright (c) 2022 Bigital Technologies Pvt. Ltd. All rights reserved.
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import tech.nimbbl.coreapisdk.core.constants.EventConstants.EXCEPTION_THROWN
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.coreapi.events.EventConstants.EXCEPTION_THROWN
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.BANK_CODE_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROWSER_BACK_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_BASE_URL

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android WebView SDK (`tech.nimbbl:webview-sdk`) — a payment library distributed via Maven Central and JitPack. Merchant apps call `NimbblCheckoutSDK.init()` + `checkout()` and receive results via the `NimbblCheckoutPaymentListener` interface. The checkout UI is a WebView loading a Nimbbl-hosted page.
 
-This SDK depends on `tech.nimbbl:core-api-sdk` (a sibling repo at `../nimbbl_mobile_kit_core_api_sdk`). The Core API SDK must be published to Maven Central before this SDK can be published.
+This SDK depends on the Kotlin Multiplatform Core API SDK `tech.nimbbl:core-api` (package `tech.nimbbl.coreapi`, sibling repo `../nimbbl_mobile_kit_kmp_core_api_sdk`). It replaced the Android-only `tech.nimbbl:core-api-sdk`. The Core API SDK must be published to Maven Central before this SDK can be published.
 
 ---
 
@@ -51,17 +51,9 @@ See [TESTING.md](TESTING.md) for the full test-running guide.
 
 ### Switching between local and Maven dependency
 
-`build.gradle.kts` line 107 controls how Core API SDK is resolved:
+The dependency is always `implementation("tech.nimbbl:core-api:$coreApiSdkVersion")` (version from `CORE_API_SDK_VERSION` in `version.properties`). With `USE_LOCAL_CORE_SDK` unset or `true` (default), `settings.gradle.kts` does `includeBuild("../nimbbl_mobile_kit_kmp_core_api_sdk")` and Gradle substitutes that coordinate with the sibling build's `:core-api` project — nothing is published. Pass `-PUSE_LOCAL_CORE_SDK=false` to resolve it from Maven instead (required before publishing, and needs the KMP core already on Maven Central).
 
-```kotlin
-// For local development (default):
-implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
-
-// For Maven Central publish (must be active before running publishRelease...):
-implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
-```
-
-**Before publishing to Maven Central, switch to the Maven coordinate** — publishing with the `project()` reference produces a broken AAR (POM won't declare the runtime dependency).
+Environment URLs live in `core/CheckoutEnvironment.kt` (set by `NimbblCheckoutSDK.setEnvironmentUrl`), not in the core: an IP-based URL sends API calls to QA3 but loads the WebView from the IP host.
 
 ---
 

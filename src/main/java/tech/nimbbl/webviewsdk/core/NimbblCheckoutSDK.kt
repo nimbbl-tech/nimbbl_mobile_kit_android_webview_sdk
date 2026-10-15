@@ -17,14 +17,14 @@ import androidx.annotation.RestrictTo
 import androidx.core.content.ContextCompat
 import org.json.JSONException
 import org.json.JSONObject
-import tech.nimbbl.coreapisdk.api.RestApiUtils
-import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.utils.extensions.getDeviceFingerPrint
-import tech.nimbbl.coreapisdk.utils.extensions.getDeviceID
-import tech.nimbbl.coreapisdk.utils.extensions.getMerchantIDFromJwtToken
-import tech.nimbbl.coreapisdk.utils.extensions.md5
-import tech.nimbbl.coreapisdk.utils.extensions.parseJwtToken
+import tech.nimbbl.coreapi.NimbblCoreApi
+import tech.nimbbl.coreapi.NimbblCoreConfig
+import tech.nimbbl.coreapi.env.NimbblEnvironment
+import tech.nimbbl.coreapi.events.EventConstants
+import tech.nimbbl.coreapi.events.NimbblEvent
+import tech.nimbbl.coreapi.initialise
+import tech.nimbbl.coreapi.util.DeviceUtils
+import tech.nimbbl.coreapi.util.JwtUtils
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.BROADCAST_PAYMENT_RESULT
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.ERROR_CODE_API_URL_NULL
@@ -97,8 +97,8 @@ class NimbblCheckoutSDK private constructor() {
         try {
             val safeOptions = options!!         // validated non-null above
             val token = safeOptions.orderToken!! // validated non-null above
-            val orderId = parseJwtToken(ctx, token)
-            val subMerchantId = getMerchantIDFromJwtToken(ctx, token)
+            val orderId = JwtUtils.parseJwtToken(token)
+            val subMerchantId = JwtUtils.getMerchantIDFromJwtToken(token)
 
             val orderIdValidation = ValidationUtils.validateOrderId(orderId)
             if (orderIdValidation is ValidationUtils.ValidationResult.Error) {
@@ -245,7 +245,7 @@ class NimbblCheckoutSDK private constructor() {
         }
 
         val normalizedInputUrl = apiUrl.trim()
-        val isIpUrl = isIpBasedUrl(normalizedInputUrl)
+        val isIpUrl = NimbblEnvironment.isIpBasedUrl(normalizedInputUrl)
 
         // If caller passes an IP-based URL, we default API calls to QA3 (as per sample-app behavior),
         // but still allow launching WebView from the IP host (useful for local WebView testing).
@@ -255,23 +255,19 @@ class NimbblCheckoutSDK private constructor() {
             normalizedInputUrl
         }
 
-        RestApiUtils.NIMBBL_TECH_URL = resolvedApiBaseUrl
+        CheckoutEnvironment.apiBaseUrl = resolvedApiBaseUrl
 
         val webViewBaseUrl = if (isIpUrl) normalizedInputUrl else resolvedApiBaseUrl
-        val webViewUrl = RestApiUtils.getWebViewUrl(webViewBaseUrl)
-        val webViewRespUrl = RestApiUtils.getWebViewResponseUrl(webViewBaseUrl)
+        val webViewUrl = NimbblEnvironment.getWebViewUrlTemplate(webViewBaseUrl)
+        val webViewRespUrl = NimbblEnvironment.getWebViewResponseUrl(webViewBaseUrl)
 
-        RestApiUtils.WEB_VIEW_VIEW_URL = webViewUrl
-        RestApiUtils.WEB_VIEW_RESP_CHECK_URL = webViewRespUrl
+        CheckoutEnvironment.webViewUrlTemplate = webViewUrl
+        CheckoutEnvironment.webViewResponseUrl = webViewRespUrl
 
         SDKUtils.logDebug(
             TAG_CHECKOUT_SDK,
             PaymentConstants.LOG_MSG_ENV_SET.format(resolvedApiBaseUrl, webViewUrl, webViewRespUrl)
         )
-    }
-
-    private fun isIpBasedUrl(url: String): Boolean {
-        return url.matches(Regex("https?://\\d+\\.\\d+\\.\\d+\\.\\d+(:\\d+)?/?.*"))
     }
 
     @JvmOverloads
@@ -313,27 +309,23 @@ class NimbblCheckoutSDK private constructor() {
             currentAppCode = appCode
         }
 
-        val deviceFingerPrint = getDeviceFingerPrint()
-        val deviceID = getDeviceID()
+        val deviceFingerPrint = DeviceUtils.getDeviceFingerPrint()
+        val deviceID = DeviceUtils.getDeviceID()
 
         if (deviceFingerPrint.isNullOrEmpty()) {
             SDKUtils.logError(TAG_CHECKOUT_SDK, PaymentConstants.LOG_MSG_INIT_FINGERPRINT_NULL)
             try {
-                NimbblCoreApiSDK.getInstance()?.logEvent(
-                    activity,
-                    EventConstants.EXCEPTION_THROWN,
-                    null,
-                    null,
-                    subMerchantId = null,
-                    mapOf<String, Any>(
-                        PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_DEVICE_FINGERPRINT_NULL,
-                        PaymentConstants.EVENT_KEY_LOCATION to PaymentConstants.EVENT_LOCATION_INIT_METHOD,
-                        PaymentConstants.EVENT_KEY_ERROR_MESSAGE to PaymentConstants.EVENT_MSG_DEVICE_FINGERPRINT_NULL,
-                        PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
-                    ),
-                    null,
-                    null,
-                    mapOf("appVersion" to PaymentConstants.SDK_VERSION),
+                NimbblCoreApi.logEvent(
+                    NimbblEvent(
+                        name = EventConstants.EXCEPTION_THROWN,
+                        additionalData = mapOf<String, Any>(
+                            PaymentConstants.EVENT_KEY_ERROR to PaymentConstants.EVENT_ERROR_DEVICE_FINGERPRINT_NULL,
+                            PaymentConstants.EVENT_KEY_LOCATION to PaymentConstants.EVENT_LOCATION_INIT_METHOD,
+                            PaymentConstants.EVENT_KEY_ERROR_MESSAGE to PaymentConstants.EVENT_MSG_DEVICE_FINGERPRINT_NULL,
+                            PaymentConstants.EVENT_KEY_STACK_TRACE to SDKUtils.getStackTrace()
+                        ),
+                        customAppInfo = mapOf(EventConstants.KEY_APP_VERSION to PaymentConstants.SDK_VERSION),
+                    )
                 )
             } catch (e: Exception) {
                 SDKUtils.logWarning(
@@ -368,9 +360,17 @@ class NimbblCheckoutSDK private constructor() {
             return
         }
 
-        val fingerPrint = md5(deviceFingerPrint + deviceID)
-        NimbblCoreApiSDK.getInstance()
-            ?.initialiseAPISDK(RestApiUtils.NIMBBL_TECH_URL, fingerPrint, deviceFingerPrint, currentAppCode)
+        val fingerPrint = DeviceUtils.md5(deviceFingerPrint + deviceID)
+        NimbblCoreApi.initialise(
+            activity,
+            NimbblCoreConfig(
+                baseUrl = CheckoutEnvironment.apiBaseUrl,
+                fingerPrint = fingerPrint,
+                deviceFingerPrint = deviceFingerPrint,
+                appCode = currentAppCode,
+                debug = SDKUtils.isDebugLoggingEnabled(),
+            )
+        )
 
         SDKUtils.logEventWithVersion(
             activity,

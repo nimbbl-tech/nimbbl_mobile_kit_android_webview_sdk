@@ -21,11 +21,10 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebView.WebViewTransport
 import android.webkit.WebViewClient
-import tech.nimbbl.coreapisdk.api.RestApiUtils
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.coreapi.events.EventConstants
 import org.json.JSONObject
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
+import tech.nimbbl.webviewsdk.core.CheckoutEnvironment
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_WEBVIEW
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -300,7 +299,7 @@ class WebViewManager(
 
     private fun handleCallbackURL(url: String?, orderID: String, orderToken: String, subMerchantId: String): Boolean {
         if (url.isNullOrEmpty()) return false
-        if (!url.startsWith(RestApiUtils.WEB_VIEW_RESP_CHECK_URL)) return false
+        if (!url.startsWith(CheckoutEnvironment.webViewResponseUrl)) return false
 
         if (!callbackHandled.compareAndSet(false, true)) {
             SDKUtils.logDebug(TAG_WEBVIEW, "Duplicate callback URL ignored: $url")

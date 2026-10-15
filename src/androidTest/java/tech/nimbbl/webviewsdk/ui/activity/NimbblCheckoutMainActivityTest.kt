@@ -15,9 +15,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import tech.nimbbl.coreapisdk.api.RestApiUtils
-import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
-import tech.nimbbl.coreapisdk.core.constants.ServiceConstants
+import tech.nimbbl.coreapi.NimbblCoreApi
+import tech.nimbbl.coreapi.NimbblCoreConfig
+import tech.nimbbl.coreapi.initialise
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 import tech.nimbbl.webviewsdk.testutil.LocalHttpServer
@@ -37,15 +37,14 @@ import java.util.concurrent.TimeUnit
 class NimbblCheckoutMainActivityTest {
 
     private lateinit var server: LocalHttpServer
-    private val originalBaseUrl = ServiceConstants.BASE_URL
     private var receiver: BroadcastReceiver? = null
     private val appContext: Context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
         server = LocalHttpServer()
-        ServiceConstants.BASE_URL = server.baseUrl
-        resetRepositorySingleton()
+        // Point the core at the local server (re-initialising replaces the previous HTTP client).
+        NimbblCoreApi.initialise(appContext, NimbblCoreConfig(baseUrl = server.baseUrl))
     }
 
     @After
@@ -53,17 +52,7 @@ class NimbblCheckoutMainActivityTest {
         receiver?.let { appContext.unregisterReceiver(it) }
         receiver = null
         server.close()
-        ServiceConstants.BASE_URL = originalBaseUrl
-        resetRepositorySingleton()
-    }
-
-    /** See NimbblCoreApiSDKRepositoryTest for why this reflection reset is needed. */
-    private fun resetRepositorySingleton() {
-        val field = runCatching {
-            NimbblCoreApiSDK::class.java.getDeclaredField("nimbblApiRepository")
-        }.getOrNull() ?: return
-        field.isAccessible = true
-        field.set(null, null)
+        NimbblCoreApi.initialise(appContext, NimbblCoreConfig())
     }
 
     private fun fakeJwt(payloadJson: String): String {

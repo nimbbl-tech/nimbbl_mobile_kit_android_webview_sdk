@@ -41,14 +41,11 @@
 # ===========================================
 # Keep model classes used by org.json
 -keep class tech.nimbbl.webviewsdk.models.** { *; }
--keep class tech.nimbbl.coreapisdk.api.models.** { *; }
 
 # ===========================================
 # Obfuscation Configuration
 # ===========================================
 -keep class tech.nimbbl.webviewsdk.models.** { *; }
--keep class tech.nimbbl.coreapisdk.api.models.** { *; }
--keep class tech.nimbbl.coreapisdk.data.models.** { *; }
 
 # Repackage only non-model classes to unique package to avoid conflicts
 -repackageclasses 'tech.nimbbl.webviewsdk.obfuscated'
@@ -70,9 +67,6 @@
 
 # Suppress warnings
 -dontwarn java.lang.invoke.StringConcatFactory
--dontwarn tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK$Companion
--dontwarn tech.nimbbl.coreapisdk.utils.extensions.NimbblSDKExtensionsKt
--dontwarn tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
 
 # ===========================================
 # Android Framework

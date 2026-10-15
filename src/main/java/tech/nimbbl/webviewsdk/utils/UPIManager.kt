@@ -15,8 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import org.json.JSONArray
 import org.json.JSONObject
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.coreapi.events.EventConstants
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_ERROR
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_LOCATION
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.JSON_KEY_UPI_APPS

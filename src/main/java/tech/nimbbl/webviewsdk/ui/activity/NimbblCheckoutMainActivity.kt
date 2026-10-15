@@ -32,18 +32,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import tech.nimbbl.coreapisdk.api.RestApiUtils
-import tech.nimbbl.coreapisdk.core.NimbblCoreApiSDK
-import tech.nimbbl.coreapisdk.core.constants.EventConstants
-import tech.nimbbl.coreapisdk.core.constants.PayloadKeys
-import tech.nimbbl.coreapisdk.utils.extensions.getMerchantIDFromJwtToken
-import tech.nimbbl.coreapisdk.utils.extensions.isNetConnected
-import tech.nimbbl.coreapisdk.utils.extensions.parseJwtToken
-import tech.nimbbl.coreapisdk.utils.logging.EventLoggingUtils
+import tech.nimbbl.coreapi.NimbblCoreApi
+import tech.nimbbl.coreapi.api.PayloadKeys
+import tech.nimbbl.coreapi.events.EventConstants
+import tech.nimbbl.coreapi.util.DeviceUtils
+import tech.nimbbl.coreapi.util.JwtUtils
 import tech.nimbbl.webviewsdk.R
 import tech.nimbbl.webviewsdk.constants.PaymentConstants
+import tech.nimbbl.webviewsdk.core.CheckoutEnvironment
 import tech.nimbbl.webviewsdk.core.NimbblCheckoutSDK
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
+import tech.nimbbl.webviewsdk.utils.EventLoggingUtils
 import tech.nimbbl.webviewsdk.utils.PaymentHandler
 import tech.nimbbl.webviewsdk.utils.PaymentURLBuilder
 import tech.nimbbl.webviewsdk.utils.SDKUtils
@@ -109,13 +108,13 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
                 return
             }
             orderToken = token
-            if (!isNetConnected(this)) {
+            if (!DeviceUtils.isNetConnected()) {
                 hideLoadingState()
                 onFailedPayment(getString(R.string.no_internet), false)
             } else {
                 try {
-                    orderID = parseJwtToken(this, orderToken)
-                    subMerchantId = getMerchantIDFromJwtToken(this, orderToken)
+                    orderID = JwtUtils.parseJwtToken(orderToken)
+                    subMerchantId = JwtUtils.getMerchantIDFromJwtToken(orderToken)
                 } catch (e: Exception) {
                     SDKUtils.logError(TAG, "Failed to parse order token: ${e.message}", e)
                     hideLoadingState()
@@ -260,13 +259,14 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     val result = withContext(Dispatchers.IO) {
-                        NimbblCoreApiSDK.getInstance()
-                            .updateOrder(token, orderId, PaymentConstants.CALLBACK_MODE_MOBILE, PaymentConstants.PLATFORM_TYPE_ANDROID)
+                        NimbblCoreApi.updateOrder(
+                            token, orderId, PaymentConstants.CALLBACK_MODE_MOBILE, PaymentConstants.PLATFORM_TYPE_ANDROID
+                        )
                     }
-                    if (result != null && result.isSuccessful) {
+                    if (result.isSuccessful) {
                         setupWebView()
                     } else {
-                        onFailedPayment(parseUpdateOrderError(result?.rawBody), true)
+                        onFailedPayment(parseUpdateOrderError(result.rawBody), true)
                     }
                 } catch (e: Exception) {
                     SDKUtils.logError(TAG, "updateOrder failed: ${e.message}", e)
@@ -292,7 +292,7 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         try {
-            val baseUrl = String.format(RestApiUtils.WEB_VIEW_VIEW_URL, orderToken)
+            val baseUrl = CheckoutEnvironment.webViewUrl(orderToken)
             paymentUrl = PaymentURLBuilder.buildPaymentURL(baseUrl, options)
         } catch (e: IllegalArgumentException) {
             SDKUtils.logError(TAG, "Invalid payment URL: ${e.message}", e)
@@ -444,12 +444,12 @@ class NimbblCheckoutMainActivity : AppCompatActivity() {
 
     private suspend fun handleUpiIntentBack() {
         val paymentEnquiryResponse = withContext(Dispatchers.IO) {
-            NimbblCoreApiSDK.getInstance().getTransactionEnquiry(orderToken, orderID, "", transactionID)
+            NimbblCoreApi.getTransactionEnquiry(orderToken, orderID, "", transactionID)
         }
 
         val jsonObject = JSONObject().apply {
             put(PayloadKeys.key_upi_intent_back_response, PaymentConstants.UPI_INTENT_BACK_RESPONSE_CLOSE)
-            val status = if (paymentEnquiryResponse?.isSuccessful == true) {
+            val status = if (paymentEnquiryResponse.isSuccessful) {
                 paymentEnquiryResponse.data?.order?.status ?: ""
             } else ""
             put(PayloadKeys.key_transaction_enquiry_api_response, status)

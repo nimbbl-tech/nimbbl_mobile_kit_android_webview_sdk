@@ -5,8 +5,8 @@ pluginManagement {
         mavenCentral()
     }
     plugins {
-        id("com.android.library") version "8.2.2" apply false
-        id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+        id("com.android.library") version "8.11.1" apply false
+        id("org.jetbrains.kotlin.android") version "2.2.10" apply false
     }
 }
 
@@ -30,8 +30,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "nimbbl_mobile_kit_android_webview_sdk"
 
+// Local development: build the KMP Core API SDK from the sibling repo. Gradle substitutes the
+// `tech.nimbbl:core-api` dependency with its :core-api project, so nothing is published.
 if (useLocalCoreSdk()) {
-    include(":nimbbl_mobile_kit_core_api_sdk")
-    project(":nimbbl_mobile_kit_core_api_sdk").projectDir =
-        file("../nimbbl_mobile_kit_core_api_sdk")
+    includeBuild("../nimbbl_mobile_kit_kmp_core_api_sdk")
 }
