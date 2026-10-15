@@ -196,7 +196,12 @@ object PaymentConstants {
     const val PAYMENT_MODE_PARAM = "payment_mode"
     const val BANK_CODE_PARAM = "bank_code"
     const val WALLET_CODE_PARAM = "wallet_code"
+    const val EMI_CODE_PARAM = "emi_code"
     const val PAYMENT_FLOW_PARAM = "payment_flow"
+    const val UPI_APP_CODE_PARAM = "upi_app_code"
+
+    // Payment flow value for UPI intent apps (gpay/phonepe/paytm)
+    const val PAYMENT_FLOW_INTENT = "intent"
 
     // JSON keys
     const val JSON_KEY_ERROR = "error"

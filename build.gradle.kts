@@ -36,6 +36,16 @@ plugins {
     id("signing")
 }
 
+fun useLocalCoreSdk(): Boolean {
+    val prop = findProperty("USE_LOCAL_CORE_SDK") as String?
+    val env = System.getenv("USE_LOCAL_CORE_SDK")
+    return when {
+        prop != null -> prop.equals("true", ignoreCase = true)
+        env != null -> env.equals("true", ignoreCase = true)
+        else -> true
+    }
+}
+
 // Dependency versions - aligned with Core API SDK (from version.properties when present)
 val coreApiSdkVersion = versionProperties.getProperty("CORE_API_SDK_VERSION", "4.0.13")
 val coreKtxVersion = "1.12.0"
@@ -66,6 +76,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -102,9 +116,11 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:$junitExtVersion")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion")
 
-    // Core API SDK - Maven Central; for local dev comment the Maven line and uncomment the local path
-    //implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
-    implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    if (useLocalCoreSdk()) {
+        implementation(project(":nimbbl_mobile_kit_core_api_sdk"))
+    } else {
+        implementation("tech.nimbbl:core-api-sdk:$coreApiSdkVersion")
+    }
 }
 
 // Maven Central coordinates (tech.nimbbl namespace)
@@ -153,7 +169,14 @@ afterEvaluate {
         repositories {
             maven {
                 name = "sonatype"
-                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                val isSnapshot = PUBLISH_VERSION.endsWith("-SNAPSHOT")
+                url = uri(
+                    if (isSnapshot) {
+                        "https://central.sonatype.com/repository/maven-snapshots/"
+                    } else {
+                        "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+                    }
+                )
                 credentials {
                     username = project.findProperty("centralPortalUsername") as String?
                         ?: System.getenv("CENTRAL_PORTAL_USERNAME")

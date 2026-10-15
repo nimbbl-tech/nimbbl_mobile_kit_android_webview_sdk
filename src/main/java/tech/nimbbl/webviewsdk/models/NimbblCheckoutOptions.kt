@@ -76,6 +76,9 @@ class NimbblCheckoutOptions : Parcelable {
     var walletCode: String? = null
         private set
 
+    var emiCode: String? = null
+        private set
+
     var paymentFlow: String? = null
         private set
 
@@ -102,6 +105,7 @@ class NimbblCheckoutOptions : Parcelable {
         private var paymentModeCode: String? = null
         private var bankCode: String? = null
         private var walletCode: String? = null
+        private var emiCode: String? = null
         private var paymentFlow: String? = null
         private var upiId: String? = null
         private var upiAppCode: String? = null
@@ -149,6 +153,11 @@ class NimbblCheckoutOptions : Parcelable {
 
         fun setWalletCode(wCode: String?): Builder {
             walletCode = wCode
+            return this
+        }
+
+        fun setEMICode(eCode: String?): Builder {
+            emiCode = eCode
             return this
         }
 
@@ -203,6 +212,7 @@ class NimbblCheckoutOptions : Parcelable {
             options.paymentModeCode = paymentModeCode
             options.bankCode = bankCode
             options.walletCode = walletCode
+            options.emiCode = emiCode
             options.paymentFlow = paymentFlow
             options.upiId = upiId
             options.upiAppCode = upiAppCode
@@ -224,6 +234,7 @@ class NimbblCheckoutOptions : Parcelable {
         paymentModeCode = `in`.readString()
         bankCode = `in`.readString()
         walletCode = `in`.readString()
+        emiCode = `in`.readString()
         paymentFlow = `in`.readString()
         upiId = `in`.readString()
         upiAppCode = `in`.readString()
@@ -245,6 +256,7 @@ class NimbblCheckoutOptions : Parcelable {
         dest.writeString(paymentModeCode)
         dest.writeString(bankCode)
         dest.writeString(walletCode)
+        dest.writeString(emiCode)
         dest.writeString(paymentFlow)
         dest.writeString(upiId)
         dest.writeString(upiAppCode)

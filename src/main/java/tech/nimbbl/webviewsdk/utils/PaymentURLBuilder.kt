@@ -22,6 +22,9 @@ import tech.nimbbl.webviewsdk.constants.PaymentConstants.PAYMENT_MODE_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.SDK_VERSION
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.TAG_PAYMENT_URL_BUILDER
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.UNKNOWN_ERROR
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.EMI_CODE_PARAM
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.PAYMENT_FLOW_INTENT
+import tech.nimbbl.webviewsdk.constants.PaymentConstants.UPI_APP_CODE_PARAM
 import tech.nimbbl.webviewsdk.constants.PaymentConstants.WALLET_CODE_PARAM
 import tech.nimbbl.webviewsdk.models.NimbblCheckoutOptions
 
@@ -68,10 +71,24 @@ object PaymentURLBuilder {
             url = appendParameter(url, WALLET_CODE_PARAM, walletCode)
         }
 
+        // Add EMI code if specified
+        val emiCode = options.emiCode
+        if (!emiCode.isNullOrEmpty()) {
+            url = appendParameter(url, EMI_CODE_PARAM, emiCode)
+        }
+
         // Add payment flow if specified
         val paymentFlow = options.paymentFlow
         if (!paymentFlow.isNullOrEmpty()) {
             url = appendParameter(url, PAYMENT_FLOW_PARAM, paymentFlow)
+        }
+
+        // Add UPI app code, only for the intent flow
+        if (paymentFlow == PAYMENT_FLOW_INTENT) {
+            val upiAppCode = options.upiAppCode
+            if (!upiAppCode.isNullOrEmpty()) {
+                url = appendParameter(url, UPI_APP_CODE_PARAM, upiAppCode)
+            }
         }
 
         // Validate final URL

@@ -19,11 +19,14 @@ This SDK depends on `tech.nimbbl:core-api-sdk` (a sibling repo at `../nimbbl_mob
 # Build release AAR (runs ProGuard)
 ./gradlew assembleRelease
 
-# Run unit tests
-./gradlew test
+# Run instrumented tests (requires a connected device/emulator — see TESTING.md for why
+# this module has no JVM unit tests: PaymentURLBuilder/NimbblCheckoutOptions need
+# android.net.Uri / android.os.Parcel, unavailable without Robolectric)
+./gradlew :connectedDebugAndroidTest
 
 # Run a single test class
-./gradlew test --tests "tech.nimbbl.webviewsdk.ExampleUnitTest"
+./gradlew :connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=tech.nimbbl.webviewsdk.utils.PaymentURLBuilderTest
 
 # Lint
 ./gradlew lint
@@ -43,6 +46,8 @@ This SDK depends on `tech.nimbbl:core-api-sdk` (a sibling repo at `../nimbbl_mob
 # Publish to JitPack (release tag)
 ./publish_to_jitpack.sh --release
 ```
+
+See [TESTING.md](TESTING.md) for the full test-running guide.
 
 ### Switching between local and Maven dependency
 
@@ -85,7 +90,7 @@ Merchant Activity
 | `NimbblCheckoutMainActivity` | UI shell. Owns WebView layout, shimmer loading state, UPI intent launch, and back-press forwarding. |
 | `WebViewManager` | Configures WebView (security settings, clients, popup windows). Handles callback URL interception and UPI app list injection. |
 | `PaymentHandler` | Constructs and sends the `BROADCAST_PAYMENT_RESULT` local broadcast for both success and failure. |
-| `PaymentURLBuilder` | Assembles the checkout URL from `NimbblCheckoutOptions` fields and handles browser-back URL merging. |
+| `PaymentURLBuilder` | Assembles the checkout URL from `NimbblCheckoutOptions` fields and handles browser-back URL merging. `upi_app_code` is appended only when `paymentFlow == "intent"` (never for `"collect"`). |
 | `UPIManager` | Queries installed UPI apps (background thread named `"nimbbl-upi-query"`), delivers result on main thread. |
 | `ValidationUtils` | Pure input validation; returns typed `ValidationResult.Success` / `ValidationResult.Error`. |
 

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        NimbblCheckoutMainActivity (declared in src/main/AndroidManifest.xml) uses setContentView
+        via AppCompatActivity, which needs a Theme.AppCompat application theme. A real host app
+        normally supplies one; this standalone test APK doesn't, so it's applied here, test-only.
+    -->
+    <application android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        <activity
+            android:name="tech.nimbbl.webviewsdk.core.TestCheckoutActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="tech.nimbbl.webviewsdk.core.PlainTestActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

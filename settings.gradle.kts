@@ -10,6 +10,16 @@ pluginManagement {
     }
 }
 
+fun useLocalCoreSdk(): Boolean {
+    val prop = providers.gradleProperty("USE_LOCAL_CORE_SDK").orNull
+    val env = System.getenv("USE_LOCAL_CORE_SDK")
+    return when {
+        prop != null -> prop.equals("true", ignoreCase = true)
+        env != null -> env.equals("true", ignoreCase = true)
+        else -> true
+    }
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
@@ -19,6 +29,9 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "nimbbl_mobile_kit_android_webview_sdk"
-// Local Core API SDK (uncomment for development):
-include(":nimbbl_mobile_kit_core_api_sdk")
-project(":nimbbl_mobile_kit_core_api_sdk").projectDir = file("../nimbbl_mobile_kit_core_api_sdk")
+
+if (useLocalCoreSdk()) {
+    include(":nimbbl_mobile_kit_core_api_sdk")
+    project(":nimbbl_mobile_kit_core_api_sdk").projectDir =
+        file("../nimbbl_mobile_kit_core_api_sdk")
+}
